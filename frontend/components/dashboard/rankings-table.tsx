@@ -20,7 +20,7 @@ export function RankingsTable({
   return (
     <Card className="h-full">
       <CardHeader className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-100">Hot Futures Rankings</h2>
+        <h2 className="text-sm font-semibold text-zinc-100">Candidate Rankings</h2>
         <select
           className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
           value={sortField}
@@ -33,19 +33,26 @@ export function RankingsTable({
         </select>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="max-h-[70vh] overflow-auto">
+        <div className="max-h-[72vh] overflow-auto">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-zinc-950 text-xs text-zinc-400">
               <tr>
                 <th className="px-3 py-2 text-left">#</th>
                 <th className="px-3 py-2 text-left">Symbol</th>
+                <th className="px-3 py-2 text-left">Bucket</th>
+                <th className="px-3 py-2 text-left">Reason Tags</th>
                 <th className="px-3 py-2 text-right">Last</th>
                 <th className="px-3 py-2 text-right">24h %</th>
-                <th className="px-3 py-2 text-right">Volume</th>
-                <th className="px-3 py-2 text-right">Composite</th>
-                <th className="px-3 py-2 text-right">Momentum</th>
+                <th className="px-3 py-2 text-right">Vol</th>
+                <th className="px-3 py-2 text-right">Composite Δ</th>
+                <th className="px-3 py-2 text-right">Rank Δ</th>
+                <th className="px-3 py-2 text-right">OI%</th>
+                <th className="px-3 py-2 text-right">Taker Flow</th>
+                <th className="px-3 py-2 text-right">L/S</th>
+                <th className="px-3 py-2 text-right">Comp</th>
+                <th className="px-3 py-2 text-right">Mom</th>
                 <th className="px-3 py-2 text-right">Setup</th>
-                <th className="px-3 py-2 text-right">Positioning</th>
+                <th className="px-3 py-2 text-right">Pos</th>
                 <th className="px-3 py-2 text-right">Heat</th>
               </tr>
             </thead>
@@ -58,11 +65,18 @@ export function RankingsTable({
                       {row.symbol}
                     </Link>
                   </td>
+                  <td className="px-3 py-2 text-xs text-zinc-300">{row.signal_bucket}</td>
+                  <td className="px-3 py-2 text-xs text-zinc-400">{row.reason_tags.slice(0, 3).join(", ") || "-"}</td>
                   <td className="px-3 py-2 text-right text-zinc-200">{formatPrice(row.last_price)}</td>
                   <td className={`px-3 py-2 text-right ${row.price_change_percent_24h >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                     {formatPercent(row.price_change_percent_24h)}
                   </td>
                   <td className="px-3 py-2 text-right text-zinc-300">{formatCompactNumber(row.quote_volume_24h)}</td>
+                  <td className="px-3 py-2 text-right text-zinc-200">{row.composite_delta?.toFixed(2) ?? "-"}</td>
+                  <td className="px-3 py-2 text-right text-zinc-200">{row.rank_change ?? "-"}</td>
+                  <td className="px-3 py-2 text-right text-zinc-300">{row.oi_change_percent_recent?.toFixed(2) ?? "-"}</td>
+                  <td className="px-3 py-2 text-right text-zinc-300">{row.taker_net_flow_recent?.toFixed(1) ?? "-"}</td>
+                  <td className="px-3 py-2 text-right text-zinc-300">{row.long_short_ratio_recent?.toFixed(3) ?? "-"}</td>
                   <td className="px-3 py-2 text-right text-zinc-100">{row.composite_score.toFixed(2)}</td>
                   <td className="px-3 py-2 text-right text-zinc-200">{row.momentum_score.toFixed(2)}</td>
                   <td className="px-3 py-2 text-right text-zinc-200">{row.setup_score.toFixed(2)}</td>

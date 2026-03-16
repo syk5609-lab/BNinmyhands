@@ -302,6 +302,15 @@ def _snapshot_to_schema(snapshot: Any) -> SymbolScanResult:
         early_signal_score=snapshot.early_signal_score,
         risk_penalty=snapshot.risk_penalty,
         composite_score=snapshot.composite_score,
+        signal_bucket=(snapshot.signal_bucket or "positioning_build"),
+        reason_tags=list(snapshot.reason_tags or []),
+        previous_rank=snapshot.previous_rank,
+        rank_change=snapshot.rank_change,
+        previous_composite_score=snapshot.previous_composite_score,
+        composite_delta=snapshot.composite_delta,
+        setup_delta=snapshot.setup_delta,
+        positioning_delta=snapshot.positioning_delta,
+        data_quality_score=(snapshot.data_quality_score if snapshot.data_quality_score is not None else 0.0),
         oi_change_percent_recent=snapshot.oi_change_percent_recent,
         taker_net_flow_recent=snapshot.taker_net_flow_recent,
         long_short_ratio_recent=snapshot.long_short_ratio_recent,
@@ -348,6 +357,11 @@ def get_asset_history(symbol: str, limit: int = 200) -> AssetHistoryResponse:
                 composite_score=s.composite_score,
                 momentum_score=s.momentum_score,
                 setup_score=s.setup_score,
+                positioning_score=s.positioning_score,
+                risk_penalty=s.risk_penalty,
+                oi_change_percent_recent=s.oi_change_percent_recent,
+                taker_net_flow_recent=s.taker_net_flow_recent,
+                long_short_ratio_recent=s.long_short_ratio_recent,
             )
             for s in snapshots
         ]

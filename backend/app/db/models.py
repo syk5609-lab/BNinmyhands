@@ -172,6 +172,16 @@ class SignalSnapshot(Base):
     risk_penalty: Mapped[float] = mapped_column(Float)
     composite_score: Mapped[float] = mapped_column(Float)
 
+    signal_bucket: Mapped[str] = mapped_column(String(32), default="positioning_build")
+    reason_tags: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    previous_rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rank_change: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    previous_composite_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    composite_delta: Mapped[float | None] = mapped_column(Float, nullable=True)
+    setup_delta: Mapped[float | None] = mapped_column(Float, nullable=True)
+    positioning_delta: Mapped[float | None] = mapped_column(Float, nullable=True)
+    data_quality_score: Mapped[float] = mapped_column(Float, default=1.0)
+
     oi_change_percent_recent: Mapped[float | None] = mapped_column(Float, nullable=True)
     taker_net_flow_recent: Mapped[float | None] = mapped_column(Float, nullable=True)
     long_short_ratio_recent: Mapped[float | None] = mapped_column(Float, nullable=True)

@@ -34,6 +34,18 @@ class FakeSnapshot:
         self.early_signal_score = score
         self.risk_penalty = 0.0
         self.composite_score = score
+        self.signal_bucket = "breakout_watch"
+        self.reason_tags = ["high_composite"]
+        self.previous_rank = 2
+        self.rank_change = 1
+        self.previous_composite_score = score - 0.1
+        self.composite_delta = 0.1
+        self.setup_delta = 0.1
+        self.positioning_delta = 0.1
+        self.data_quality_score = 0.9
+        self.oi_change_percent_recent = 0.5
+        self.taker_net_flow_recent = 100.0
+        self.long_short_ratio_recent = 1.02
 
 
 class FakeRepo:

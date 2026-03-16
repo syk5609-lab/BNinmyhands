@@ -16,6 +16,15 @@ class SymbolScanResult(BaseModel):
     early_signal_score: float
     risk_penalty: float
     composite_score: float
+    signal_bucket: Literal["breakout_watch", "positioning_build", "squeeze_watch", "overheat_risk"]
+    reason_tags: list[str]
+    previous_rank: int | None = None
+    rank_change: int | None = None
+    previous_composite_score: float | None = None
+    composite_delta: float | None = None
+    setup_delta: float | None = None
+    positioning_delta: float | None = None
+    data_quality_score: float
     oi_change_percent_recent: float | None = None
     taker_net_flow_recent: float | None = None
     long_short_ratio_recent: float | None = None
@@ -106,6 +115,11 @@ class AssetHistoryPoint(BaseModel):
     composite_score: float
     momentum_score: float
     setup_score: float
+    positioning_score: float
+    risk_penalty: float
+    oi_change_percent_recent: float | None
+    taker_net_flow_recent: float | None
+    long_short_ratio_recent: float | None
 
 
 class AssetHistoryResponse(BaseModel):

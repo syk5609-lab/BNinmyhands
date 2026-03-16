@@ -1,5 +1,7 @@
 export type ScannerTimeframe = "1h" | "4h" | "24h";
 
+export type SignalBucket = "breakout_watch" | "positioning_build" | "squeeze_watch" | "overheat_risk";
+
 export interface SymbolScanResult {
   symbol: string;
   last_price: number;
@@ -12,6 +14,15 @@ export interface SymbolScanResult {
   early_signal_score: number;
   risk_penalty: number;
   composite_score: number;
+  signal_bucket: SignalBucket;
+  reason_tags: string[];
+  previous_rank: number | null;
+  rank_change: number | null;
+  previous_composite_score: number | null;
+  composite_delta: number | null;
+  setup_delta: number | null;
+  positioning_delta: number | null;
+  data_quality_score: number;
   oi_change_percent_recent: number | null;
   taker_net_flow_recent: number | null;
   long_short_ratio_recent: number | null;
@@ -56,6 +67,11 @@ export interface AssetHistoryPoint {
   composite_score: number;
   momentum_score: number;
   setup_score: number;
+  positioning_score: number;
+  risk_penalty: number;
+  oi_change_percent_recent: number | null;
+  taker_net_flow_recent: number | null;
+  long_short_ratio_recent: number | null;
 }
 
 export interface AssetHistoryResponse {
