@@ -1,17 +1,15 @@
-import json
 import math
 from datetime import datetime, timezone
-from pathlib import Path
 from statistics import median
 from typing import Any
-from uuid import uuid4
 
 from fastapi import HTTPException
 
+from app.db.session import SessionLocal
+from app.repositories.signal_repository import SignalRepository
 from app.schemas import ScanResponse
 from app.services.scanner import build_scan
 
-DATA_DIR = Path("backend/data/snapshots")
 VALID_TIMEFRAMES = {"1h", "4h", "24h"}
 VALID_RANK_FIELDS = {
     "momentum_score",
@@ -20,30 +18,9 @@ VALID_RANK_FIELDS = {
     "composite_score",
     "heat_score",
     "setup_score",
-    "price_change_percent_24h",  # Internal baseline-compatible rank field.
+    "price_change_percent_24h",
 }
-_MIN_PAIR_COVERAGE_RATIO = 0.4  # Skip low-overlap pairs to reduce noisy evaluations.
-
-
-def _timeframe_dir(timeframe: str) -> Path:
-    return DATA_DIR / timeframe
-
-
-def _snapshot_rows(scan: ScanResponse) -> list[dict[str, Any]]:
-    return [row.model_dump() for row in scan.results]
-
-
-def _parse_generated_at(value: Any) -> datetime | None:
-    if not isinstance(value, str):
-        return None
-    normalized = value.replace("Z", "+00:00")
-    try:
-        parsed = datetime.fromisoformat(normalized)
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+_MIN_PAIR_COVERAGE_RATIO = 0.4
 
 
 def _validate_inputs(timeframe: str, rank_field: str, top_k: int, horizon_steps: int) -> None:
@@ -61,72 +38,41 @@ def save_snapshot(timeframe: str, limit: int, volume_percentile: float) -> tuple
     _validate_inputs(timeframe=timeframe, rank_field="composite_score", top_k=1, horizon_steps=1)
     scan = build_scan(limit=limit, volume_percentile=volume_percentile, timeframe=timeframe)
 
-    ts = scan.generated_at.astimezone(timezone.utc)
-    folder = _timeframe_dir(timeframe)
-    folder.mkdir(parents=True, exist_ok=True)
-    file_path = folder / f"{ts.strftime('%Y%m%d_%H%M%S_%f')}_{uuid4().hex[:8]}.json"
-
-    payload = {
-        "generated_at": scan.generated_at.isoformat(),
-        "timeframe": timeframe,
-        "limit": limit,
-        "volume_percentile": volume_percentile,
-        "results": _snapshot_rows(scan),
-    }
-    file_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    return scan, str(file_path)
-
-
-def _load_snapshots(timeframe: str) -> list[dict[str, Any]]:
-    folder = _timeframe_dir(timeframe)
-    if not folder.exists():
-        return []
-
-    snapshots_with_time: list[tuple[datetime, dict[str, Any]]] = []
-    for path in folder.glob("*.json"):
+    with SessionLocal() as db:
+        repo = SignalRepository(db)
+        run = repo.create_signal_run(
+            timeframe=timeframe,
+            limit=limit,
+            volume_percentile=volume_percentile,
+            started_at=scan.generated_at.astimezone(timezone.utc),
+        )
         try:
-            raw = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            continue
-        if not isinstance(raw, dict) or not isinstance(raw.get("results"), list):
-            continue
-        parsed_ts = _parse_generated_at(raw.get("generated_at"))
-        if parsed_ts is None:
-            continue
-        snapshots_with_time.append((parsed_ts, raw))
+            repo.save_scan_results(run, scan)
+            db.commit()
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            run = repo.create_signal_run(
+                timeframe=timeframe,
+                limit=limit,
+                volume_percentile=volume_percentile,
+                started_at=datetime.now(timezone.utc),
+            )
+            repo.mark_run_failed(run, str(exc))
+            db.commit()
+            raise
 
-    snapshots_with_time.sort(key=lambda item: item[0])
-    return [item[1] for item in snapshots_with_time]
-
-
-def _symbol_price_map(snapshot: dict[str, Any]) -> dict[str, float]:
-    mapping: dict[str, float] = {}
-    for row in snapshot.get("results", []):
-        if not isinstance(row, dict):
-            continue
-        symbol = row.get("symbol")
-        last_price = row.get("last_price")
-        try:
-            if isinstance(symbol, str):
-                price = float(last_price)
-                if price > 0:
-                    mapping[symbol] = price
-        except (TypeError, ValueError):
-            continue
-    return mapping
+        return scan, f"db://signal_runs/{run.id}"
 
 
-def _ranked_symbols(snapshot: dict[str, Any], rank_field: str, top_k: int) -> list[str]:
-    rows: list[dict[str, Any]] = [row for row in snapshot.get("results", []) if isinstance(row, dict)]
-
+def _ranked_symbols(rows: list[dict[str, Any]], rank_field: str, top_k: int) -> list[str]:
     def score(row: dict[str, Any]) -> float:
         try:
             return float(row.get(rank_field, float("-inf")))
         except (TypeError, ValueError):
             return float("-inf")
 
-    rows.sort(key=score, reverse=True)
-    return [str(row.get("symbol")) for row in rows[:top_k] if isinstance(row.get("symbol"), str)]
+    ranked = sorted(rows, key=score, reverse=True)
+    return [str(row.get("symbol")) for row in ranked[:top_k] if isinstance(row.get("symbol"), str)]
 
 
 def _safe_std(values: list[float]) -> float:
@@ -199,12 +145,12 @@ def _evaluate_rank_field(
         current = snapshots[idx]
         future = snapshots[idx + horizon_steps]
 
-        picks = _ranked_symbols(current, rank_field=rank_field, top_k=top_k)
+        picks = _ranked_symbols(current["rows"], rank_field=rank_field, top_k=top_k)
         if not picks:
             continue
 
-        current_prices = _symbol_price_map(current)
-        future_prices = _symbol_price_map(future)
+        current_prices = {row["symbol"]: row["last_price"] for row in current["rows"]}
+        future_prices = {row["symbol"]: row["last_price"] for row in future["rows"]}
 
         returns: list[float] = []
         for symbol in picks:
@@ -221,14 +167,10 @@ def _evaluate_rank_field(
             skipped_low_coverage_pairs += 1
             continue
 
-        current_ts = _parse_generated_at(current.get("generated_at"))
-        future_ts = _parse_generated_at(future.get("generated_at"))
-        if current_ts is not None and future_ts is not None:
-            elapsed_seconds.append(max(0.0, (future_ts - current_ts).total_seconds()))
-
         valid_pairs += 1
         coverage_ratios.append(coverage_ratio)
         matched_counts.append(matched)
+        elapsed_seconds.append(max(0.0, (future["generated_at"] - current["generated_at"]).total_seconds()))
         all_returns.extend(returns)
         basket_best.append(max(returns))
         basket_worst.append(min(returns))
@@ -247,7 +189,37 @@ def _evaluate_rank_field(
 
 def evaluate_snapshots(timeframe: str, rank_field: str, top_k: int, horizon_steps: int) -> dict[str, Any]:
     _validate_inputs(timeframe=timeframe, rank_field=rank_field, top_k=top_k, horizon_steps=horizon_steps)
-    snapshots = _load_snapshots(timeframe)
+
+    with SessionLocal() as db:
+        repo = SignalRepository(db)
+        runs = repo.list_runs(timeframe=timeframe)
+
+        snapshots: list[dict[str, Any]] = []
+        for run in runs:
+            rows = repo.get_run_snapshots(run.id)
+            if not rows:
+                continue
+            snapshots.append(
+                {
+                    "generated_at": run.started_at,
+                    "rows": [
+                        {
+                            "symbol": row.symbol,
+                            "last_price": row.last_price,
+                            "price_change_percent_24h": row.price_change_percent_24h,
+                            "quote_volume_24h": row.quote_volume_24h,
+                            "heat_score": row.heat_score,
+                            "momentum_score": row.momentum_score,
+                            "setup_score": row.setup_score,
+                            "positioning_score": row.positioning_score,
+                            "early_signal_score": row.early_signal_score,
+                            "risk_penalty": row.risk_penalty,
+                            "composite_score": row.composite_score,
+                        }
+                        for row in rows
+                    ],
+                }
+            )
 
     if len(snapshots) <= horizon_steps:
         empty = _compute_metrics([], [], [], 0, 0, [], [], [])
@@ -280,7 +252,7 @@ def evaluate_snapshots(timeframe: str, rank_field: str, top_k: int, horizon_step
         "rank_field": rank_field,
         "top_k": top_k,
         "horizon_steps": horizon_steps,
-        "horizon_unit": "snapshot_steps",  # Step-based index horizon, not strict wall-clock hours.
+        "horizon_unit": "snapshot_steps",
         "total_snapshots_found": len(snapshots),
         "strategy_metrics": strategy_metrics,
         "baseline_metrics": baseline_metrics,
