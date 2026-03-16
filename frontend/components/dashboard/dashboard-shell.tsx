@@ -79,7 +79,12 @@ export function DashboardShell({
           ))}
         </div>
 
-        <RankingsTable results={filteredResults} sortField={sortField} onSortFieldChange={setSortField} />
+        <RankingsTable
+          results={filteredResults}
+          sortField={sortField}
+          timeframe={timeframe}
+          onSortFieldChange={setSortField}
+        />
       </div>
     </div>
   );

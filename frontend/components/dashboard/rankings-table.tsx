@@ -11,10 +11,12 @@ export type ScoreSortField = "composite_score" | "momentum_score" | "setup_score
 export function RankingsTable({
   results,
   sortField,
+  timeframe,
   onSortFieldChange,
 }: {
   results: SymbolScanResult[];
   sortField: ScoreSortField;
+  timeframe: "1h" | "4h" | "24h";
   onSortFieldChange: (field: ScoreSortField) => void;
 }) {
   return (
@@ -61,7 +63,7 @@ export function RankingsTable({
                 <tr key={row.symbol} className="border-t border-zinc-800 hover:bg-zinc-800/30">
                   <td className="px-3 py-2 text-zinc-400">{idx + 1}</td>
                   <td className="px-3 py-2 font-medium text-zinc-100">
-                    <Link href={`/coin/${row.symbol}`} className="text-emerald-300 hover:underline">
+                    <Link href={`/coin/${row.symbol}?timeframe=${timeframe}`} className="text-emerald-300 hover:underline">
                       {row.symbol}
                     </Link>
                   </td>

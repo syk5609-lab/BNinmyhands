@@ -61,11 +61,16 @@ export async function fetchResearchRunDetail(runId: number): Promise<ResearchRun
   return fetchJson<ResearchRunDetail>(`/api/research/runs/${runId}`);
 }
 
-export async function fetchAssetLatest(symbol: string): Promise<AssetLatestResponse> {
-  return fetchJson<AssetLatestResponse>(`/api/assets/${encodeURIComponent(symbol)}/latest`);
+export async function fetchAssetLatest(symbol: string, timeframe: ScannerTimeframe): Promise<AssetLatestResponse> {
+  const search = new URLSearchParams({ timeframe });
+  return fetchJson<AssetLatestResponse>(`/api/assets/${encodeURIComponent(symbol)}/latest?${search.toString()}`);
 }
 
-export async function fetchAssetHistory(symbol: string, limit: number = 200): Promise<AssetHistoryResponse> {
-  const search = new URLSearchParams({ limit: String(limit) });
+export async function fetchAssetHistory(
+  symbol: string,
+  timeframe: ScannerTimeframe,
+  limit: number = 200,
+): Promise<AssetHistoryResponse> {
+  const search = new URLSearchParams({ timeframe, limit: String(limit) });
   return fetchJson<AssetHistoryResponse>(`/api/assets/${encodeURIComponent(symbol)}/history?${search.toString()}`);
 }

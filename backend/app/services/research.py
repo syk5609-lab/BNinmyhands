@@ -337,19 +337,23 @@ def get_research_run(run_id: int) -> ResearchRunDetail:
         )
 
 
-def get_asset_latest(symbol: str) -> AssetLatestResponse:
+def get_asset_latest(symbol: str, timeframe: str) -> AssetLatestResponse:
+    if timeframe not in VALID_TIMEFRAMES:
+        raise HTTPException(status_code=422, detail=f"Invalid timeframe: {timeframe}")
     with SessionLocal() as db:
         repo = SignalRepository(db)
-        snapshot = repo.get_asset_latest(symbol.upper())
+        snapshot = repo.get_asset_latest(symbol.upper(), timeframe=timeframe)
         if not snapshot:
-            raise HTTPException(status_code=404, detail="Symbol not found")
+            raise HTTPException(status_code=404, detail="Symbol not found for timeframe")
         return AssetLatestResponse(symbol=snapshot.symbol, ts=snapshot.ts, row=_snapshot_to_schema(snapshot))
 
 
-def get_asset_history(symbol: str, limit: int = 200) -> AssetHistoryResponse:
+def get_asset_history(symbol: str, timeframe: str, limit: int = 200) -> AssetHistoryResponse:
+    if timeframe not in VALID_TIMEFRAMES:
+        raise HTTPException(status_code=422, detail=f"Invalid timeframe: {timeframe}")
     with SessionLocal() as db:
         repo = SignalRepository(db)
-        snapshots = repo.get_asset_history(symbol.upper(), limit=limit)
+        snapshots = repo.get_asset_history(symbol.upper(), timeframe=timeframe, limit=limit)
         points = [
             AssetHistoryPoint(
                 ts=s.ts,

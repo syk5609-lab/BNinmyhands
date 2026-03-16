@@ -108,10 +108,17 @@ def research_run_detail(run_id: int) -> ResearchRunDetail:
 
 
 @app.get("/api/assets/{symbol}/latest", response_model=AssetLatestResponse)
-def asset_latest(symbol: str) -> AssetLatestResponse:
-    return get_asset_latest(symbol)
+def asset_latest(
+    symbol: str,
+    timeframe: Literal["1h", "4h", "24h"] = Query(default="1h"),
+) -> AssetLatestResponse:
+    return get_asset_latest(symbol, timeframe=timeframe)
 
 
 @app.get("/api/assets/{symbol}/history", response_model=AssetHistoryResponse)
-def asset_history(symbol: str, limit: int = Query(default=200, ge=1, le=2000)) -> AssetHistoryResponse:
-    return get_asset_history(symbol, limit=limit)
+def asset_history(
+    symbol: str,
+    timeframe: Literal["1h", "4h", "24h"] = Query(default="1h"),
+    limit: int = Query(default=200, ge=1, le=2000),
+) -> AssetHistoryResponse:
+    return get_asset_history(symbol, timeframe=timeframe, limit=limit)

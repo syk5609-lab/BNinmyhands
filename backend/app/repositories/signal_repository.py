@@ -196,19 +196,29 @@ class SignalRepository:
         stmt = select(SignalSnapshot).where(SignalSnapshot.signal_run_id == run_id).order_by(SignalSnapshot.composite_score.desc())
         return list(self.db.scalars(stmt).all())
 
-    def get_asset_latest(self, symbol: str) -> SignalSnapshot | None:
+    def get_asset_latest(self, symbol: str, timeframe: str) -> SignalSnapshot | None:
         stmt = (
             select(SignalSnapshot)
-            .where(SignalSnapshot.symbol == symbol)
+            .join(SignalRun, SignalRun.id == SignalSnapshot.signal_run_id)
+            .where(
+                SignalSnapshot.symbol == symbol,
+                SignalRun.timeframe == timeframe,
+                SignalRun.status == "completed",
+            )
             .order_by(SignalSnapshot.ts.desc())
             .limit(1)
         )
         return self.db.scalar(stmt)
 
-    def get_asset_history(self, symbol: str, limit: int = 200) -> list[SignalSnapshot]:
+    def get_asset_history(self, symbol: str, timeframe: str, limit: int = 200) -> list[SignalSnapshot]:
         stmt = (
             select(SignalSnapshot)
-            .where(SignalSnapshot.symbol == symbol)
+            .join(SignalRun, SignalRun.id == SignalSnapshot.signal_run_id)
+            .where(
+                SignalSnapshot.symbol == symbol,
+                SignalRun.timeframe == timeframe,
+                SignalRun.status == "completed",
+            )
             .order_by(SignalSnapshot.ts.desc())
             .limit(limit)
         )
