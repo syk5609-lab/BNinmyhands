@@ -1,21 +1,52 @@
 from typing import Literal
 
 from fastapi import FastAPI, Query
+from sqlalchemy import text
 
+from app.db.session import SessionLocal
 from app.schemas import (
+    AssetHistoryResponse,
+    AssetLatestResponse,
     ResearchEvaluationResponse,
+    ResearchRunDetail,
+    ResearchRunSummary,
     ResearchSnapshotRequest,
     ResearchSnapshotResponse,
     ScanResponse,
 )
-from app.services.research import evaluate_snapshots, save_snapshot
+from app.services.research import (
+    evaluate_snapshots,
+    get_asset_history,
+    get_asset_latest,
+    get_research_run,
+    list_research_runs,
+    save_snapshot,
+)
 from app.services.scanner import build_scan
+from app.services.scheduler import start_scheduler, stop_scheduler
 
 app = FastAPI(title="Binance USDⓈ-M Futures Scanner API", version="0.1.0")
 
 
+@app.on_event("startup")
+def _startup() -> None:
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+def _shutdown() -> None:
+    stop_scheduler()
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/health/db")
+def health_db() -> dict[str, str]:
+    with SessionLocal() as db:
+        db.execute(text("SELECT 1"))
     return {"status": "ok"}
 
 
@@ -64,3 +95,23 @@ def research_evaluate(
         horizon_steps=horizon_steps,
     )
     return ResearchEvaluationResponse(**payload)
+
+
+@app.get("/api/research/runs", response_model=list[ResearchRunSummary])
+def research_runs(timeframe: Literal["1h", "4h", "24h"] = Query(default="1h")) -> list[ResearchRunSummary]:
+    return list_research_runs(timeframe=timeframe)
+
+
+@app.get("/api/research/runs/{run_id}", response_model=ResearchRunDetail)
+def research_run_detail(run_id: int) -> ResearchRunDetail:
+    return get_research_run(run_id)
+
+
+@app.get("/api/assets/{symbol}/latest", response_model=AssetLatestResponse)
+def asset_latest(symbol: str) -> AssetLatestResponse:
+    return get_asset_latest(symbol)
+
+
+@app.get("/api/assets/{symbol}/history", response_model=AssetHistoryResponse)
+def asset_history(symbol: str, limit: int = Query(default=200, ge=1, le=2000)) -> AssetHistoryResponse:
+    return get_asset_history(symbol, limit=limit)

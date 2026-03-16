@@ -1,27 +1,48 @@
 # Binance USDⓈ-M Futures Scanner (Backend)
 
-Minimal FastAPI backend that scans Binance USDⓈ-M Futures markets and returns a ranked list of hot symbols.
+FastAPI backend for Binance USDⓈ-M Futures scan/ranking with PostgreSQL persistence and research endpoints.
 
 ## Requirements
 
 - Python 3.10+
+- Docker + Docker Compose
 
-## Run locally
+## Local setup
 
 ```bash
+# from repo root
+docker compose up -d
+
 cd backend
+cp .env.example .env
 pip install -r requirements.txt
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-## Endpoints
+## Core endpoints
 
 - `GET /health`
-- `GET /api/scan/today?limit=50&volume_percentile=0.7`
+- `GET /health/db`
+- `GET /api/scan/today?limit=50&volume_percentile=0.7&timeframe=1h`
 
-## Notes
+## Research endpoints
 
-- Uses Binance public USDⓈ-M Futures endpoints only.
-- Scanner filters to `*USDT` symbols, applies volume percentile filter, and computes:
-  - `heat_score = price_change_percent_24h * log10(quote_volume_24h)`
-- Includes a small in-memory cache in `binance_client.py` to reduce API calls.
+- `POST /api/research/snapshot`
+- `GET /api/research/evaluate`
+- `GET /api/research/runs?timeframe=1h`
+- `GET /api/research/runs/{run_id}`
+- `GET /api/assets/{symbol}/latest`
+- `GET /api/assets/{symbol}/history`
+
+## Auto snapshot scheduler
+
+Disabled by default.
+
+Set in `.env`:
+
+- `AUTO_SNAPSHOT_ENABLED=true`
+- `AUTO_SNAPSHOT_INTERVAL_SECONDS=900`
+- `AUTO_SNAPSHOT_TIMEFRAME=1h`
+- `AUTO_SNAPSHOT_LIMIT=50`
+- `AUTO_SNAPSHOT_VOLUME_PERCENTILE=0.7`

@@ -3,7 +3,18 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Asset, Exchange, Instrument, SignalRun, SignalScore, SignalSnapshot
+from app.db.models import (
+    Asset,
+    Exchange,
+    FundingSnapshot,
+    Instrument,
+    MarketSnapshot,
+    OISnapshot,
+    PositioningSnapshot,
+    SignalRun,
+    SignalScore,
+    SignalSnapshot,
+)
 from app.schemas import ScanResponse
 
 
@@ -71,6 +82,45 @@ class SignalRepository:
 
         for row in scan.results:
             instrument = self._get_or_create_instrument(exchange.id, row.symbol)
+            self.db.add(
+                MarketSnapshot(
+                    instrument_id=instrument.id,
+                    ts=ts,
+                    last_price=row.last_price,
+                    price_change_percent_24h=row.price_change_percent_24h,
+                    quote_volume_24h=row.quote_volume_24h,
+                    raw_payload=row.model_dump(),
+                )
+            )
+            self.db.add(
+                OISnapshot(
+                    instrument_id=instrument.id,
+                    ts=ts,
+                    oi_change_percent_recent=row.oi_change_percent_recent,
+                    raw_payload={"oi_change_percent_recent": row.oi_change_percent_recent},
+                )
+            )
+            self.db.add(
+                FundingSnapshot(
+                    instrument_id=instrument.id,
+                    ts=ts,
+                    funding_rate=None,
+                    raw_payload=None,
+                )
+            )
+            self.db.add(
+                PositioningSnapshot(
+                    instrument_id=instrument.id,
+                    ts=ts,
+                    taker_net_flow_recent=row.taker_net_flow_recent,
+                    long_short_ratio_recent=row.long_short_ratio_recent,
+                    raw_payload={
+                        "taker_net_flow_recent": row.taker_net_flow_recent,
+                        "long_short_ratio_recent": row.long_short_ratio_recent,
+                    },
+                )
+            )
+
             snapshot = SignalSnapshot(
                 signal_run_id=run.id,
                 instrument_id=instrument.id,
@@ -123,9 +173,34 @@ class SignalRepository:
         self.db.flush()
 
     def list_runs(self, timeframe: str) -> list[SignalRun]:
-        stmt = select(SignalRun).where(SignalRun.timeframe == timeframe, SignalRun.status == "completed").order_by(SignalRun.started_at)
+        stmt = (
+            select(SignalRun)
+            .where(SignalRun.timeframe == timeframe, SignalRun.status == "completed")
+            .order_by(SignalRun.started_at)
+        )
         return list(self.db.scalars(stmt).all())
+
+    def get_run(self, run_id: int) -> SignalRun | None:
+        return self.db.scalar(select(SignalRun).where(SignalRun.id == run_id))
 
     def get_run_snapshots(self, run_id: int) -> list[SignalSnapshot]:
         stmt = select(SignalSnapshot).where(SignalSnapshot.signal_run_id == run_id).order_by(SignalSnapshot.composite_score.desc())
+        return list(self.db.scalars(stmt).all())
+
+    def get_asset_latest(self, symbol: str) -> SignalSnapshot | None:
+        stmt = (
+            select(SignalSnapshot)
+            .where(SignalSnapshot.symbol == symbol)
+            .order_by(SignalSnapshot.ts.desc())
+            .limit(1)
+        )
+        return self.db.scalar(stmt)
+
+    def get_asset_history(self, symbol: str, limit: int = 200) -> list[SignalSnapshot]:
+        stmt = (
+            select(SignalSnapshot)
+            .where(SignalSnapshot.symbol == symbol)
+            .order_by(SignalSnapshot.ts.desc())
+            .limit(limit)
+        )
         return list(self.db.scalars(stmt).all())

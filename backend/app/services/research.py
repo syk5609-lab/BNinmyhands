@@ -7,7 +7,15 @@ from fastapi import HTTPException
 
 from app.db.session import SessionLocal
 from app.repositories.signal_repository import SignalRepository
-from app.schemas import ScanResponse
+from app.schemas import (
+    AssetHistoryPoint,
+    AssetHistoryResponse,
+    AssetLatestResponse,
+    ResearchRunDetail,
+    ResearchRunSummary,
+    ScanResponse,
+    SymbolScanResult,
+)
 from app.services.scanner import build_scan
 
 VALID_TIMEFRAMES = {"1h", "4h", "24h"}
@@ -257,3 +265,90 @@ def evaluate_snapshots(timeframe: str, rank_field: str, top_k: int, horizon_step
         "strategy_metrics": strategy_metrics,
         "baseline_metrics": baseline_metrics,
     }
+
+
+def list_research_runs(timeframe: str) -> list[ResearchRunSummary]:
+    if timeframe not in VALID_TIMEFRAMES:
+        raise HTTPException(status_code=422, detail=f"Invalid timeframe: {timeframe}")
+    with SessionLocal() as db:
+        repo = SignalRepository(db)
+        runs = repo.list_runs(timeframe)
+        items: list[ResearchRunSummary] = []
+        for run in runs:
+            row_count = len(repo.get_run_snapshots(run.id))
+            items.append(
+                ResearchRunSummary(
+                    id=run.id,
+                    timeframe=run.timeframe,
+                    started_at=run.started_at,
+                    finished_at=run.finished_at,
+                    status=run.status,
+                    row_count=row_count,
+                )
+            )
+        return items
+
+
+def _snapshot_to_schema(snapshot: Any) -> SymbolScanResult:
+    return SymbolScanResult(
+        symbol=snapshot.symbol,
+        last_price=snapshot.last_price,
+        price_change_percent_24h=snapshot.price_change_percent_24h,
+        quote_volume_24h=snapshot.quote_volume_24h,
+        heat_score=snapshot.heat_score,
+        momentum_score=snapshot.momentum_score,
+        setup_score=snapshot.setup_score,
+        positioning_score=snapshot.positioning_score,
+        early_signal_score=snapshot.early_signal_score,
+        risk_penalty=snapshot.risk_penalty,
+        composite_score=snapshot.composite_score,
+        oi_change_percent_recent=snapshot.oi_change_percent_recent,
+        taker_net_flow_recent=snapshot.taker_net_flow_recent,
+        long_short_ratio_recent=snapshot.long_short_ratio_recent,
+    )
+
+
+def get_research_run(run_id: int) -> ResearchRunDetail:
+    with SessionLocal() as db:
+        repo = SignalRepository(db)
+        run = repo.get_run(run_id)
+        if not run:
+            raise HTTPException(status_code=404, detail="Run not found")
+        snapshots = repo.get_run_snapshots(run.id)
+        rows = [_snapshot_to_schema(s) for s in snapshots]
+        return ResearchRunDetail(
+            id=run.id,
+            timeframe=run.timeframe,
+            started_at=run.started_at,
+            finished_at=run.finished_at,
+            status=run.status,
+            limit=run.limit,
+            volume_percentile=run.volume_percentile,
+            rows=rows,
+        )
+
+
+def get_asset_latest(symbol: str) -> AssetLatestResponse:
+    with SessionLocal() as db:
+        repo = SignalRepository(db)
+        snapshot = repo.get_asset_latest(symbol.upper())
+        if not snapshot:
+            raise HTTPException(status_code=404, detail="Symbol not found")
+        return AssetLatestResponse(symbol=snapshot.symbol, ts=snapshot.ts, row=_snapshot_to_schema(snapshot))
+
+
+def get_asset_history(symbol: str, limit: int = 200) -> AssetHistoryResponse:
+    with SessionLocal() as db:
+        repo = SignalRepository(db)
+        snapshots = repo.get_asset_history(symbol.upper(), limit=limit)
+        points = [
+            AssetHistoryPoint(
+                ts=s.ts,
+                last_price=s.last_price,
+                composite_score=s.composite_score,
+                momentum_score=s.momentum_score,
+                setup_score=s.setup_score,
+            )
+            for s in snapshots
+        ]
+        return AssetHistoryResponse(symbol=symbol.upper(), points=points)

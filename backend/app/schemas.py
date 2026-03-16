@@ -72,3 +72,42 @@ class ResearchEvaluationResponse(BaseModel):
     total_snapshots_found: int
     strategy_metrics: EvaluationMetrics
     baseline_metrics: EvaluationMetrics
+
+
+class ResearchRunSummary(BaseModel):
+    id: int
+    timeframe: str
+    started_at: datetime
+    finished_at: datetime | None
+    status: str
+    row_count: int
+
+
+class ResearchRunDetail(BaseModel):
+    id: int
+    timeframe: str
+    started_at: datetime
+    finished_at: datetime | None
+    status: str
+    limit: int
+    volume_percentile: float
+    rows: list[SymbolScanResult]
+
+
+class AssetLatestResponse(BaseModel):
+    symbol: str
+    ts: datetime
+    row: SymbolScanResult
+
+
+class AssetHistoryPoint(BaseModel):
+    ts: datetime
+    last_price: float
+    composite_score: float
+    momentum_score: float
+    setup_score: float
+
+
+class AssetHistoryResponse(BaseModel):
+    symbol: str
+    points: list[AssetHistoryPoint]
