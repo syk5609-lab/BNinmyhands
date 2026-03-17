@@ -5,21 +5,30 @@ export function AppHeader({
   resultCount,
   averageHeat,
   maxHeat,
+  latestRunAt,
+  dataAgeLabel,
 }: {
   timeframe: ScannerTimeframe;
   resultCount: number;
   averageHeat: number;
   maxHeat: number;
+  latestRunAt?: string;
+  dataAgeLabel?: string;
 }) {
   return (
     <header className="border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
       <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-3">
         <div className="text-sm font-semibold tracking-wide text-zinc-100">BN Futures Heat Scanner</div>
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-2 text-xs text-zinc-300">
-          <p>Today&apos;s market snapshot · {timeframe}</p>
+          <p>Latest persisted snapshot · {timeframe}</p>
           <p className="mt-1">
             {resultCount} symbols · avg heat {averageHeat.toFixed(2)} · max heat {maxHeat.toFixed(2)}
           </p>
+          {latestRunAt ? (
+            <p className="mt-1 text-zinc-400">
+              Updated {new Date(latestRunAt).toLocaleString()} {dataAgeLabel ? `(${dataAgeLabel})` : ""}
+            </p>
+          ) : null}
         </div>
         <div className="text-right text-xs text-zinc-400">Theme toggle placeholder</div>
       </div>

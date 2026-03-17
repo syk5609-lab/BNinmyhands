@@ -11,13 +11,9 @@ type BucketFilter = "all" | "breakout_watch" | "positioning_build" | "squeeze_wa
 
 export function DashboardShell({
   timeframe,
-  limit,
-  volumePercentile,
   results,
 }: {
   timeframe: ScannerTimeframe;
-  limit: number;
-  volumePercentile: number;
   results: SymbolScanResult[];
 }) {
   const [symbolSearch, setSymbolSearch] = useState("");
@@ -46,8 +42,6 @@ export function DashboardShell({
       <div>
         <FiltersPanel
           timeframe={timeframe}
-          limit={limit}
-          volumePercentile={volumePercentile}
           symbolSearch={symbolSearch}
           onSymbolSearchChange={setSymbolSearch}
         />

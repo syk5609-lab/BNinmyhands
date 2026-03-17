@@ -192,6 +192,15 @@ class SignalRepository:
     def get_run(self, run_id: int) -> SignalRun | None:
         return self.db.scalar(select(SignalRun).where(SignalRun.id == run_id))
 
+    def get_latest_run(self, timeframe: str) -> SignalRun | None:
+        stmt = (
+            select(SignalRun)
+            .where(SignalRun.timeframe == timeframe, SignalRun.status == "completed")
+            .order_by(SignalRun.started_at.desc())
+            .limit(1)
+        )
+        return self.db.scalar(stmt)
+
     def get_run_snapshots(self, run_id: int) -> list[SignalSnapshot]:
         stmt = select(SignalSnapshot).where(SignalSnapshot.signal_run_id == run_id).order_by(SignalSnapshot.composite_score.desc())
         return list(self.db.scalars(stmt).all())

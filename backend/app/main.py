@@ -18,6 +18,7 @@ from app.services.research import (
     evaluate_snapshots,
     get_asset_history,
     get_asset_latest,
+    get_latest_research_run,
     get_research_run,
     list_research_runs,
     save_snapshot,
@@ -100,6 +101,11 @@ def research_evaluate(
 @app.get("/api/research/runs", response_model=list[ResearchRunSummary])
 def research_runs(timeframe: Literal["1h", "4h", "24h"] = Query(default="1h")) -> list[ResearchRunSummary]:
     return list_research_runs(timeframe=timeframe)
+
+
+@app.get("/api/research/runs/latest", response_model=ResearchRunDetail)
+def research_latest_run(timeframe: Literal["1h", "4h", "24h"] = Query(default="1h")) -> ResearchRunDetail:
+    return get_latest_research_run(timeframe=timeframe)
 
 
 @app.get("/api/research/runs/{run_id}", response_model=ResearchRunDetail)

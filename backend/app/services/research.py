@@ -317,6 +317,28 @@ def _snapshot_to_schema(snapshot: Any) -> SymbolScanResult:
     )
 
 
+def get_latest_research_run(timeframe: str) -> ResearchRunDetail:
+    if timeframe not in VALID_TIMEFRAMES:
+        raise HTTPException(status_code=422, detail=f"Invalid timeframe: {timeframe}")
+    with SessionLocal() as db:
+        repo = SignalRepository(db)
+        run = repo.get_latest_run(timeframe=timeframe)
+        if not run:
+            raise HTTPException(status_code=404, detail="No completed run found for timeframe")
+        snapshots = repo.get_run_snapshots(run.id)
+        rows = [_snapshot_to_schema(s) for s in snapshots]
+        return ResearchRunDetail(
+            id=run.id,
+            timeframe=run.timeframe,
+            started_at=run.started_at,
+            finished_at=run.finished_at,
+            status=run.status,
+            limit=run.limit,
+            volume_percentile=run.volume_percentile,
+            rows=rows,
+        )
+
+
 def get_research_run(run_id: int) -> ResearchRunDetail:
     with SessionLocal() as db:
         repo = SignalRepository(db)

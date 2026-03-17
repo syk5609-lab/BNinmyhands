@@ -61,6 +61,11 @@ export async function fetchResearchRunDetail(runId: number): Promise<ResearchRun
   return fetchJson<ResearchRunDetail>(`/api/research/runs/${runId}`);
 }
 
+export async function fetchLatestResearchRun(timeframe: ScannerTimeframe): Promise<ResearchRunDetail> {
+  const search = new URLSearchParams({ timeframe });
+  return fetchJson<ResearchRunDetail>(`/api/research/runs/latest?${search.toString()}`);
+}
+
 export async function fetchAssetLatest(symbol: string, timeframe: ScannerTimeframe): Promise<AssetLatestResponse> {
   const search = new URLSearchParams({ timeframe });
   return fetchJson<AssetLatestResponse>(`/api/assets/${encodeURIComponent(symbol)}/latest?${search.toString()}`);

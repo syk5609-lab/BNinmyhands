@@ -4,7 +4,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { ScannerTimeframe } from "@/lib/types/scanner";
 
 function updateParam(searchParams: URLSearchParams, key: string, value: string) {
@@ -15,14 +14,10 @@ function updateParam(searchParams: URLSearchParams, key: string, value: string) 
 
 export function FiltersPanel({
   timeframe,
-  limit,
-  volumePercentile,
   symbolSearch,
   onSymbolSearchChange,
 }: {
   timeframe: ScannerTimeframe;
-  limit: number;
-  volumePercentile: number;
   symbolSearch: string;
   onSymbolSearchChange: (value: string) => void;
 }) {
@@ -52,39 +47,6 @@ export function FiltersPanel({
               </button>
             ))}
           </div>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs text-zinc-400">Limit</label>
-          <Select
-            value={String(limit)}
-            onChange={(event) =>
-              router.push(`${pathname}?${updateParam(new URLSearchParams(searchParams), "limit", event.target.value)}`)
-            }
-          >
-            {[20, 50, 100].map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs text-zinc-400">Volume percentile: {volumePercentile.toFixed(2)}</label>
-          <input
-            className="w-full accent-emerald-500"
-            type="range"
-            min={0.5}
-            max={0.9}
-            step={0.05}
-            value={volumePercentile}
-            onChange={(event) =>
-              router.push(
-                `${pathname}?${updateParam(new URLSearchParams(searchParams), "volume_percentile", event.target.value)}`,
-              )
-            }
-          />
         </div>
 
         <div>
