@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    container_name: binance_scanner_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: binance_scanner
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d binance_scanner"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  pgdata:
