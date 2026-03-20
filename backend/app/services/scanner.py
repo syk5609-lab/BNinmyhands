@@ -1,13 +1,16 @@
+import logging
 import math
 from datetime import datetime, timezone
 
 import pandas as pd
+from fastapi import HTTPException
 from sqlalchemy import desc, select
 
 from app.db.models import SignalRun, SignalSnapshot
 from app.db.session import SessionLocal
 from app.schemas import ScanResponse, SymbolScanResult
 from app.services.binance_client import (
+    fetch_premium_index,
     fetch_futures_tickers_24h,
     fetch_global_longshort_accounts,
     fetch_open_interest_hist,
@@ -47,6 +50,9 @@ _TIMEFRAME_SCORE_WEIGHTS = {
     "4h": {"momentum": 0.36, "positioning": 0.30, "early": 0.34},
     "24h": {"momentum": 0.40, "positioning": 0.33, "early": 0.27},
 }
+
+_FUNDING_NEUTRAL_EPSILON = 1e-8
+logger = logging.getLogger(__name__)
 
 
 def _to_numeric_series(df: pd.DataFrame, column: str) -> pd.Series:
@@ -103,6 +109,38 @@ def _compute_long_short_ratio(symbol: str, period: str, limit: int) -> float | N
         return None
 
     return float(ratios.iloc[-1])
+
+
+def _load_latest_funding_map() -> dict[str, float]:
+    try:
+        funding_rows = fetch_premium_index()
+    except HTTPException as exc:
+        logger.warning("Funding fetch unavailable; proceeding without funding data: %s", exc.detail)
+        return {}
+
+    funding_map: dict[str, float] = {}
+    for row in funding_rows:
+        if not isinstance(row, dict):
+            continue
+        symbol = row.get("symbol")
+        if not isinstance(symbol, str):
+            continue
+        try:
+            funding_rate = float(row.get("lastFundingRate"))
+        except (TypeError, ValueError):
+            continue
+        funding_map[symbol] = funding_rate
+    return funding_map
+
+
+def _classify_funding_bias(funding_rate: float | None) -> str | None:
+    if funding_rate is None:
+        return None
+    if abs(funding_rate) <= _FUNDING_NEUTRAL_EPSILON:
+        return "neutral"
+    if funding_rate > 0:
+        return "positive"
+    return "negative"
 
 
 def _load_previous_run_symbol_metrics(timeframe: str) -> dict[str, dict[str, float | int]]:
@@ -221,6 +259,7 @@ def build_scan(limit: int = 50, volume_percentile: float = 0.7, timeframe: str =
     w = _TIMEFRAME_SCORE_WEIGHTS[tf]
 
     previous_metrics = _load_previous_run_symbol_metrics(tf)
+    funding_map = _load_latest_funding_map()
 
     enriched_rows: list[dict] = []
     for _, row in filtered.iterrows():
@@ -232,6 +271,9 @@ def build_scan(limit: int = 50, volume_percentile: float = 0.7, timeframe: str =
         oi_change_percent_recent = _compute_oi_change_percent(symbol, cfg["oi_period"], cfg["oi_limit"])
         taker_net_flow_recent = _compute_taker_net_flow(symbol, cfg["taker_period"], cfg["taker_limit"])
         long_short_ratio_recent = _compute_long_short_ratio(symbol, cfg["ls_period"], cfg["ls_limit"])
+        funding_rate_latest = funding_map.get(symbol)
+        funding_rate_abs = abs(funding_rate_latest) if funding_rate_latest is not None else None
+        funding_bias = _classify_funding_bias(funding_rate_latest)
 
         raw_base = price_change_percent_24h * (math.log10(quote_volume_24h) if quote_volume_24h > 0 else 0.0)
         oi_raw = oi_change_percent_recent if oi_change_percent_recent is not None else 0.0
@@ -252,6 +294,9 @@ def build_scan(limit: int = 50, volume_percentile: float = 0.7, timeframe: str =
                 "oi_change_percent_recent": oi_change_percent_recent,
                 "taker_net_flow_recent": taker_net_flow_recent,
                 "long_short_ratio_recent": long_short_ratio_recent,
+                "funding_rate_latest": funding_rate_latest,
+                "funding_rate_abs": funding_rate_abs,
+                "funding_bias": funding_bias,
                 "raw_base": raw_base,
                 "oi_raw": oi_raw,
                 "flow_norm_raw": flow_norm_raw,
@@ -393,6 +438,9 @@ def build_scan(limit: int = 50, volume_percentile: float = 0.7, timeframe: str =
             oi_change_percent_recent=(None if pd.isna(row.oi_change_percent_recent) else float(row.oi_change_percent_recent)),
             taker_net_flow_recent=(None if pd.isna(row.taker_net_flow_recent) else float(row.taker_net_flow_recent)),
             long_short_ratio_recent=(None if pd.isna(row.long_short_ratio_recent) else float(row.long_short_ratio_recent)),
+            funding_rate_latest=(None if pd.isna(row.funding_rate_latest) else float(row.funding_rate_latest)),
+            funding_rate_abs=(None if pd.isna(row.funding_rate_abs) else float(row.funding_rate_abs)),
+            funding_bias=(None if pd.isna(row.funding_bias) else str(row.funding_bias)),
         )
         for row in top_rows.itertuples(index=False)
     ]

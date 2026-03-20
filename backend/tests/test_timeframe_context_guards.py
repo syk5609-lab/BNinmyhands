@@ -8,13 +8,13 @@ def _read(path: str) -> str:
 
 
 def test_dashboard_links_include_timeframe_query_param():
-    src = _read("frontend/components/dashboard/rankings-table.tsx")
-    assert "`/coin/${row.symbol}?timeframe=${timeframe}`" in src
+    src = _read("frontend-runtime/components/dashboard/rankings-table.tsx")
+    assert "`/coin/${row.symbol}?timeframe=${timeframe}&run_id=${runId}`" in src
 
 
 def test_dashboard_uses_latest_persisted_run_endpoint_not_live_scan():
-    page_src = _read("frontend/app/page.tsx")
-    api_src = _read("frontend/lib/api/scanner.ts")
+    page_src = _read("frontend-runtime/app/page.tsx")
+    api_src = _read("frontend-runtime/lib/api/scanner.ts")
 
     assert "fetchLatestResearchRun" in page_src
     assert "fetchTodayScan" not in page_src
@@ -34,14 +34,15 @@ def test_backend_has_latest_run_endpoint_and_timeframe_filtering():
 
 
 def test_coin_detail_page_handles_missing_or_invalid_timeframe_gracefully():
-    src = _read("frontend/app/coin/[symbol]/page.tsx")
+    src = _read("frontend-runtime/app/coin/[symbol]/page.tsx")
     assert "function parseTimeframe" in src
-    assert "if (!parsedSymbol || !timeframe)" in src
+    assert "function parseRunId" in src
+    assert "if (!parsedSymbol || !timeframe || !runId)" in src
     assert "return <UnavailableState" in src
     assert "try {" in src and "} catch {" in src
 
 
 def test_dashboard_has_clear_empty_state_for_timeframe_without_runs():
-    src = _read("frontend/app/page.tsx")
+    src = _read("frontend-runtime/app/page.tsx")
     assert "No completed run for" in src
     assert "uses persisted completed runs" in src

@@ -54,3 +54,40 @@ def test_build_scan_applies_previous_run_deltas(monkeypatch):
     assert btc.setup_delta is not None
     assert btc.positioning_delta is not None
     assert btc.signal_bucket in {"breakout_watch", "positioning_build", "squeeze_watch", "overheat_risk"}
+
+
+def test_build_scan_populates_funding_fields(monkeypatch):
+    monkeypatch.setattr(
+        scanner,
+        "fetch_futures_tickers_24h",
+        lambda: [
+            {"symbol": "BTCUSDT", "lastPrice": "100", "priceChangePercent": "2", "quoteVolume": "1000000"},
+            {"symbol": "ETHUSDT", "lastPrice": "50", "priceChangePercent": "1", "quoteVolume": "900000"},
+            {"symbol": "XRPUSDT", "lastPrice": "1", "priceChangePercent": "0.5", "quoteVolume": "800000"},
+        ],
+    )
+    monkeypatch.setattr(scanner, "get_tradable_usdt_perpetual_symbols", lambda: {"BTCUSDT", "ETHUSDT", "XRPUSDT"})
+    monkeypatch.setattr(scanner, "_compute_oi_change_percent", lambda *args, **kwargs: 1.0)
+    monkeypatch.setattr(scanner, "_compute_taker_net_flow", lambda *args, **kwargs: 100.0)
+    monkeypatch.setattr(scanner, "_compute_long_short_ratio", lambda *args, **kwargs: 1.05)
+    monkeypatch.setattr(scanner, "_load_previous_run_symbol_metrics", lambda timeframe: {})
+    monkeypatch.setattr(
+        scanner,
+        "_load_latest_funding_map",
+        lambda: {"BTCUSDT": 0.0001, "ETHUSDT": -0.0002, "XRPUSDT": 0.0},
+    )
+
+    result = scanner.build_scan(limit=3, volume_percentile=0.0, timeframe="1h")
+    funding_by_symbol = {row.symbol: row for row in result.results}
+
+    assert funding_by_symbol["BTCUSDT"].funding_rate_latest == 0.0001
+    assert funding_by_symbol["BTCUSDT"].funding_rate_abs == 0.0001
+    assert funding_by_symbol["BTCUSDT"].funding_bias == "positive"
+
+    assert funding_by_symbol["ETHUSDT"].funding_rate_latest == -0.0002
+    assert funding_by_symbol["ETHUSDT"].funding_rate_abs == 0.0002
+    assert funding_by_symbol["ETHUSDT"].funding_bias == "negative"
+
+    assert funding_by_symbol["XRPUSDT"].funding_rate_latest == 0.0
+    assert funding_by_symbol["XRPUSDT"].funding_rate_abs == 0.0
+    assert funding_by_symbol["XRPUSDT"].funding_bias == "neutral"

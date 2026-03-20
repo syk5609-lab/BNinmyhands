@@ -1,0 +1,15 @@
+
+# local env / python cache
+backend/.env
+backend/.venv/
+backend/.pytest_cache/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# frontend build artifacts
+frontend-runtime/node_modules/
+frontend-runtime/.next/
+
+# macOS
+.DS_Store

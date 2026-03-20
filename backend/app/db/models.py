@@ -60,7 +60,6 @@ class MarketSnapshot(Base):
     __tablename__ = "market_snapshots"
     __table_args__ = (
         UniqueConstraint("instrument_id", "ts", name="uq_market_snapshots_instrument_ts"),
-        Index("ix_market_snapshots_ts", "ts"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -76,7 +75,6 @@ class OISnapshot(Base):
     __tablename__ = "oi_snapshots"
     __table_args__ = (
         UniqueConstraint("instrument_id", "ts", name="uq_oi_snapshots_instrument_ts"),
-        Index("ix_oi_snapshots_ts", "ts"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -90,7 +88,6 @@ class FundingSnapshot(Base):
     __tablename__ = "funding_snapshots"
     __table_args__ = (
         UniqueConstraint("instrument_id", "ts", name="uq_funding_snapshots_instrument_ts"),
-        Index("ix_funding_snapshots_ts", "ts"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -104,7 +101,6 @@ class PositioningSnapshot(Base):
     __tablename__ = "positioning_snapshots"
     __table_args__ = (
         UniqueConstraint("instrument_id", "ts", name="uq_positioning_snapshots_instrument_ts"),
-        Index("ix_positioning_snapshots_ts", "ts"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -185,5 +181,203 @@ class SignalSnapshot(Base):
     oi_change_percent_recent: Mapped[float | None] = mapped_column(Float, nullable=True)
     taker_net_flow_recent: Mapped[float | None] = mapped_column(Float, nullable=True)
     long_short_ratio_recent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    funding_rate_latest: Mapped[float | None] = mapped_column(Float, nullable=True)
+    funding_rate_abs: Mapped[float | None] = mapped_column(Float, nullable=True)
+    funding_bias: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     raw_payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+
+class User(Base):
+    __tablename__ = "users"
+    __table_args__ = (
+        Index("ix_users_role", "role"),
+        Index("ix_users_status", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    nickname: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(512))
+    role: Mapped[str] = mapped_column(String(16), default="user")
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Profile(Base):
+    __tablename__ = "profiles"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user: Mapped[User] = relationship()
+
+
+class AuthSession(Base):
+    __tablename__ = "sessions"
+    __table_args__ = (
+        UniqueConstraint("session_token_hash", name="uq_sessions_token_hash"),
+        Index("ix_sessions_user_expires", "user_id", "expires_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    session_token_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    user: Mapped[User] = relationship()
+
+
+class EmailVerificationToken(Base):
+    __tablename__ = "email_verification_tokens"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_email_verification_tokens_hash"),
+        Index("ix_email_verification_tokens_user_expires", "user_id", "expires_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship()
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_password_reset_tokens_hash"),
+        Index("ix_password_reset_tokens_user_expires", "user_id", "expires_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship()
+
+
+class CommunityPost(Base):
+    __tablename__ = "community_posts"
+    __table_args__ = (
+        Index("ix_community_posts_symbol_created", "symbol", "created_at"),
+        Index("ix_community_posts_status_created", "status", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(32))
+    run_id: Mapped[int | None] = mapped_column(ForeignKey("signal_runs.id", ondelete="SET NULL"), nullable=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    body: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    hidden_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
+    run: Mapped[SignalRun | None] = relationship()
+    hidden_by_user: Mapped[User | None] = relationship(foreign_keys=[hidden_by_user_id])
+
+
+class CommunityReport(Base):
+    __tablename__ = "community_reports"
+    __table_args__ = (
+        UniqueConstraint("post_id", "reporter_id", name="uq_community_reports_post_reporter"),
+        Index("ix_community_reports_status_created", "status", "created_at"),
+        Index("ix_community_reports_post_created", "post_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("community_posts.id", ondelete="CASCADE"), nullable=False)
+    reporter_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reason: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16), default="open")
+    moderator_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    post: Mapped[CommunityPost] = relationship()
+    reporter: Mapped[User] = relationship(foreign_keys=[reporter_id])
+    resolved_by_user: Mapped[User | None] = relationship(foreign_keys=[resolved_by_user_id])
+
+
+class AdSlot(Base):
+    __tablename__ = "ad_slots"
+    __table_args__ = (
+        UniqueConstraint("placement", name="uq_ad_slots_placement"),
+        Index("ix_ad_slots_enabled_priority", "enabled", "priority"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    placement: Mapped[str] = mapped_column(String(32))
+    label: Mapped[str] = mapped_column(String(128))
+    enabled: Mapped[bool] = mapped_column(default=False)
+    priority: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AdCreative(Base):
+    __tablename__ = "ad_creatives"
+    __table_args__ = (
+        Index("ix_ad_creatives_slot_status", "slot_id", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    slot_id: Mapped[int] = mapped_column(ForeignKey("ad_slots.id", ondelete="CASCADE"), nullable=False)
+    title: Mapped[str] = mapped_column(String(160))
+    body_copy: Mapped[str | None] = mapped_column(Text, nullable=True)
+    image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    target_url: Mapped[str] = mapped_column(String(1000))
+    cta_label: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="draft")
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    slot: Mapped[AdSlot] = relationship()
+
+
+class AdEvent(Base):
+    __tablename__ = "ad_events"
+    __table_args__ = (
+        Index("ix_ad_events_created_at", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    slot_id: Mapped[int] = mapped_column(ForeignKey("ad_slots.id", ondelete="CASCADE"), nullable=False)
+    creative_id: Mapped[int] = mapped_column(ForeignKey("ad_creatives.id", ondelete="CASCADE"), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(16))
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+    slot: Mapped[AdSlot] = relationship()
+    creative: Mapped[AdCreative] = relationship()
+    user: Mapped[User | None] = relationship()
+
+
+class FeatureFlag(Base):
+    __tablename__ = "feature_flags"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(default=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)

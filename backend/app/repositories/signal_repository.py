@@ -104,8 +104,12 @@ class SignalRepository:
                 FundingSnapshot(
                     instrument_id=instrument.id,
                     ts=ts,
-                    funding_rate=None,
-                    raw_payload=None,
+                    funding_rate=row.funding_rate_latest,
+                    raw_payload={
+                        "funding_rate_latest": row.funding_rate_latest,
+                        "funding_rate_abs": row.funding_rate_abs,
+                        "funding_bias": row.funding_bias,
+                    },
                 )
             )
             self.db.add(
@@ -148,6 +152,9 @@ class SignalRepository:
                 oi_change_percent_recent=row.oi_change_percent_recent,
                 taker_net_flow_recent=row.taker_net_flow_recent,
                 long_short_ratio_recent=row.long_short_ratio_recent,
+                funding_rate_latest=row.funding_rate_latest,
+                funding_rate_abs=row.funding_rate_abs,
+                funding_bias=row.funding_bias,
                 raw_payload=row.model_dump(),
             )
             self.db.add(snapshot)
@@ -205,6 +212,17 @@ class SignalRepository:
         stmt = select(SignalSnapshot).where(SignalSnapshot.signal_run_id == run_id).order_by(SignalSnapshot.composite_score.desc())
         return list(self.db.scalars(stmt).all())
 
+    def get_asset_snapshot_in_run(self, symbol: str, run_id: int) -> SignalSnapshot | None:
+        stmt = (
+            select(SignalSnapshot)
+            .where(
+                SignalSnapshot.signal_run_id == run_id,
+                SignalSnapshot.symbol == symbol,
+            )
+            .limit(1)
+        )
+        return self.db.scalar(stmt)
+
     def get_asset_latest(self, symbol: str, timeframe: str) -> SignalSnapshot | None:
         stmt = (
             select(SignalSnapshot)
@@ -227,6 +245,27 @@ class SignalRepository:
                 SignalSnapshot.symbol == symbol,
                 SignalRun.timeframe == timeframe,
                 SignalRun.status == "completed",
+            )
+            .order_by(SignalSnapshot.ts.desc())
+            .limit(limit)
+        )
+        return list(self.db.scalars(stmt).all())
+
+    def get_asset_history_until_ts(
+        self,
+        symbol: str,
+        timeframe: str,
+        max_ts: datetime,
+        limit: int = 200,
+    ) -> list[SignalSnapshot]:
+        stmt = (
+            select(SignalSnapshot)
+            .join(SignalRun, SignalRun.id == SignalSnapshot.signal_run_id)
+            .where(
+                SignalSnapshot.symbol == symbol,
+                SignalRun.timeframe == timeframe,
+                SignalRun.status == "completed",
+                SignalSnapshot.ts <= max_ts,
             )
             .order_by(SignalSnapshot.ts.desc())
             .limit(limit)
