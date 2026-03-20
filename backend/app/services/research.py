@@ -289,7 +289,7 @@ def list_research_runs(timeframe: str) -> list[ResearchRunSummary]:
         return items
 
 
-def _snapshot_to_schema(snapshot: Any) -> SymbolScanResult:
+def _snapshot_to_schema(snapshot) -> SymbolScanResult:
     return SymbolScanResult(
         symbol=snapshot.symbol,
         last_price=snapshot.last_price,
@@ -302,18 +302,21 @@ def _snapshot_to_schema(snapshot: Any) -> SymbolScanResult:
         early_signal_score=snapshot.early_signal_score,
         risk_penalty=snapshot.risk_penalty,
         composite_score=snapshot.composite_score,
-        signal_bucket=(snapshot.signal_bucket or "positioning_build"),
-        reason_tags=list(snapshot.reason_tags or []),
+        signal_bucket=snapshot.signal_bucket,
+        reason_tags=snapshot.reason_tags or [],
         previous_rank=snapshot.previous_rank,
         rank_change=snapshot.rank_change,
         previous_composite_score=snapshot.previous_composite_score,
         composite_delta=snapshot.composite_delta,
         setup_delta=snapshot.setup_delta,
         positioning_delta=snapshot.positioning_delta,
-        data_quality_score=(snapshot.data_quality_score if snapshot.data_quality_score is not None else 0.0),
+        data_quality_score=snapshot.data_quality_score,
         oi_change_percent_recent=snapshot.oi_change_percent_recent,
         taker_net_flow_recent=snapshot.taker_net_flow_recent,
         long_short_ratio_recent=snapshot.long_short_ratio_recent,
+        funding_rate_latest=snapshot.funding_rate_latest,
+        funding_rate_abs=snapshot.funding_rate_abs,
+        funding_bias=snapshot.funding_bias,
     )
 
 
@@ -359,23 +362,58 @@ def get_research_run(run_id: int) -> ResearchRunDetail:
         )
 
 
-def get_asset_latest(symbol: str, timeframe: str) -> AssetLatestResponse:
+def get_asset_latest(symbol: str, timeframe: str, run_id: int | None = None) -> AssetLatestResponse:
     if timeframe not in VALID_TIMEFRAMES:
         raise HTTPException(status_code=422, detail=f"Invalid timeframe: {timeframe}")
     with SessionLocal() as db:
         repo = SignalRepository(db)
+
+        if run_id is not None:
+            run = repo.get_run(run_id)
+            if not run or run.status != "completed":
+                raise HTTPException(status_code=404, detail="Run not found")
+            if run.timeframe != timeframe:
+                raise HTTPException(status_code=422, detail="run_id does not match timeframe")
+
+            snapshot = repo.get_asset_snapshot_in_run(symbol.upper(), run_id)
+            if not snapshot:
+                raise HTTPException(status_code=404, detail="Symbol not found for run")
+            return AssetLatestResponse(symbol=snapshot.symbol, ts=snapshot.ts, row=_snapshot_to_schema(snapshot))
+
         snapshot = repo.get_asset_latest(symbol.upper(), timeframe=timeframe)
         if not snapshot:
             raise HTTPException(status_code=404, detail="Symbol not found for timeframe")
         return AssetLatestResponse(symbol=snapshot.symbol, ts=snapshot.ts, row=_snapshot_to_schema(snapshot))
 
 
-def get_asset_history(symbol: str, timeframe: str, limit: int = 200) -> AssetHistoryResponse:
+def get_asset_history(symbol: str, timeframe: str, limit: int = 200, run_id: int | None = None) -> AssetHistoryResponse:
     if timeframe not in VALID_TIMEFRAMES:
         raise HTTPException(status_code=422, detail=f"Invalid timeframe: {timeframe}")
     with SessionLocal() as db:
         repo = SignalRepository(db)
-        snapshots = repo.get_asset_history(symbol.upper(), timeframe=timeframe, limit=limit)
+
+        snapshots = None
+        if run_id is not None:
+            run = repo.get_run(run_id)
+            if not run or run.status != "completed":
+                raise HTTPException(status_code=404, detail="Run not found")
+            if run.timeframe != timeframe:
+                raise HTTPException(status_code=422, detail="run_id does not match timeframe")
+
+            # Validate the symbol exists in the requested run before returning history.
+            if not repo.get_asset_snapshot_in_run(symbol.upper(), run_id):
+                raise HTTPException(status_code=404, detail="Symbol not found for run")
+
+            snapshots = repo.get_asset_history_until_ts(
+                symbol.upper(),
+                timeframe=timeframe,
+                max_ts=run.started_at,
+                limit=limit,
+            )
+
+        if snapshots is None:
+            snapshots = repo.get_asset_history(symbol.upper(), timeframe=timeframe, limit=limit)
+
         points = [
             AssetHistoryPoint(
                 ts=s.ts,

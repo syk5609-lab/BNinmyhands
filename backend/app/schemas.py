@@ -28,6 +28,9 @@ class SymbolScanResult(BaseModel):
     oi_change_percent_recent: float | None = None
     taker_net_flow_recent: float | None = None
     long_short_ratio_recent: float | None = None
+    funding_rate_latest: float | None = None
+    funding_rate_abs: float | None = None
+    funding_bias: str | None = None
 
 
 class ScanResponse(BaseModel):

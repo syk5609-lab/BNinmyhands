@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from app.repositories.signal_repository import SignalRepository
+from app.services.research import _snapshot_to_schema
 from app.schemas import ScanResponse, SymbolScanResult
 
 
@@ -54,6 +55,9 @@ def test_save_scan_results_persists_timeseries_and_signals():
                 oi_change_percent_recent=0.5,
                 taker_net_flow_recent=1200.0,
                 long_short_ratio_recent=1.02,
+                funding_rate_latest=-0.0004,
+                funding_rate_abs=0.0004,
+                funding_bias="negative",
             )
         ],
     )
@@ -66,3 +70,16 @@ def test_save_scan_results_persists_timeseries_and_signals():
     assert "OISnapshot" in added_types
     assert "FundingSnapshot" in added_types
     assert "PositioningSnapshot" in added_types
+
+    signal_snapshot = next(obj for obj in db.added if type(obj).__name__ == "SignalSnapshot")
+    funding_snapshot = next(obj for obj in db.added if type(obj).__name__ == "FundingSnapshot")
+
+    assert signal_snapshot.funding_rate_latest == -0.0004
+    assert signal_snapshot.funding_rate_abs == 0.0004
+    assert signal_snapshot.funding_bias == "negative"
+    assert funding_snapshot.funding_rate == -0.0004
+
+    schema_row = _snapshot_to_schema(signal_snapshot)
+    assert schema_row.funding_rate_latest == -0.0004
+    assert schema_row.funding_rate_abs == 0.0004
+    assert schema_row.funding_bias == "negative"

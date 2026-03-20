@@ -51,6 +51,9 @@ class FakeSnapshot:
         self.oi_change_percent_recent = 0.5
         self.taker_net_flow_recent = 100.0
         self.long_short_ratio_recent = 1.02
+        self.funding_rate_latest = -0.0001
+        self.funding_rate_abs = 0.0001
+        self.funding_bias = "negative"
 
 
 class FakeRepo:

@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from app.config import settings
 
 _TICKERS_CACHE: dict[str, Any] = {"data": None, "expires_at": 0.0}
+_PREMIUM_INDEX_CACHE: dict[str, Any] = {"data": None, "expires_at": 0.0}
 _OI_CACHE: dict[tuple[str, str, int], dict[str, Any]] = {}
 _TAKER_CACHE: dict[tuple[str, str, int], dict[str, Any]] = {}
 _LS_CACHE: dict[tuple[str, str, int], dict[str, Any]] = {}
@@ -73,6 +74,21 @@ def fetch_futures_tickers_24h() -> list[dict]:
     data = _fetch_list_endpoint(url=url, params={})
     _TICKERS_CACHE["data"] = data
     _TICKERS_CACHE["expires_at"] = now + settings.ticker_cache_ttl_seconds
+    return data
+
+
+def fetch_premium_index() -> list[dict]:
+    """Return the raw JSON list from /fapi/v1/premiumIndex."""
+    now = time.time()
+    cached_data = _PREMIUM_INDEX_CACHE.get("data")
+    expires_at = _PREMIUM_INDEX_CACHE.get("expires_at", 0.0)
+    if cached_data is not None and now < expires_at:
+        return cached_data
+
+    url = f"{settings.binance_futures_base_url}/fapi/v1/premiumIndex"
+    data = _fetch_list_endpoint(url=url, params={})
+    _PREMIUM_INDEX_CACHE["data"] = data
+    _PREMIUM_INDEX_CACHE["expires_at"] = now + _METRIC_CACHE_TTL_SECONDS
     return data
 
 

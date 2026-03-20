@@ -20,6 +20,23 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
+## Validation
+
+```bash
+./.venv/bin/python -m pytest -q
+PYTHONPATH=. ./.venv/bin/alembic upgrade head --sql
+```
+
+## Launch auth env
+
+Set in `.env` when needed:
+
+- `FRONTEND_ORIGINS=http://127.0.0.1:3000,http://localhost:3000`
+- `SESSION_COOKIE_NAME=bn_launch_session`
+- `SESSION_DURATION_SECONDS=1209600`
+- `SECURE_COOKIES=false`
+- `AUTH_DEV_TOKEN_PREVIEW_ENABLED=true`
+
 ## Core endpoints
 
 - `GET /health`
@@ -34,6 +51,38 @@ uvicorn app.main:app --reload
 - `GET /api/research/runs/{run_id}`
 - `GET /api/assets/{symbol}/latest`
 - `GET /api/assets/{symbol}/history`
+
+## Auth endpoints
+
+- `POST /auth/signup`
+- `POST /auth/login`
+- `POST /auth/logout`
+- `GET /auth/me`
+- `PATCH /account/profile`
+- `POST /auth/verify/request`
+- `POST /auth/verify/confirm`
+- `POST /auth/password-reset/request`
+- `POST /auth/password-reset/confirm`
+
+## Community / ads / flags
+
+- `GET /community/posts`
+- `GET /community/latest`
+- `POST /community/posts`
+- `POST /community/reports`
+- `GET /ads/slots`
+- `POST /ads/events`
+- `GET /runtime/flags`
+- `GET /admin/feature-flags`
+- `PATCH /admin/feature-flags/{key}`
+- `GET /admin/ads/slots`
+- `GET /admin/ads/creatives`
+
+Launch feature flags:
+
+- `community_enabled`
+- `ads_enabled`
+- `write_actions_enabled`
 
 ## Auto snapshot scheduler
 
