@@ -47,11 +47,13 @@ export function AdPlacement({ placement, className = "" }: { placement: AdPlacem
     return <div className={className} aria-hidden="true" data-sponsored-empty={placement} />;
   }
 
+  const variant = placement === "dashboard_top" ? "compact" : "full";
+
   return (
     <div className={className}>
       <div className="space-y-3">
         {slots.map((slot) => (
-          <SponsoredCard key={`${slot.id}-${slot.creative.id}`} slot={slot} />
+          <SponsoredCard key={`${slot.id}-${slot.creative.id}`} slot={slot} variant={variant} />
         ))}
       </div>
     </div>

@@ -1,45 +1,137 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { AdPlacement } from "@/components/ads/ad-placement";
-import { FiltersPanel } from "@/components/dashboard/filters-panel";
+import { useAuth } from "@/components/auth/auth-provider";
 import { RankingsTable, ScoreSortField } from "@/components/dashboard/rankings-table";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScannerTimeframe, SymbolScanResult } from "@/lib/types/scanner";
+import { formatCompactNumber, formatPercent } from "@/lib/utils/format";
 
-type BucketFilter = "all" | "breakout_watch" | "positioning_build" | "squeeze_watch" | "overheat_risk";
-type StrategyPreset = "breakout" | "positioning_build" | "squeeze_watch" | "overheat_risk";
+type StrategyPreset = "breakout" | "positioning" | "squeeze" | "overheat";
+type DirectionMode = "pump" | "dump";
 
 const PRESET_CONFIG: Record<
   StrategyPreset,
-  { label: string; bucket: Exclude<BucketFilter, "all">; sortField: ScoreSortField; description: string }
+  {
+    title: string;
+    bucket: SymbolScanResult["signal_bucket"];
+    sortField: ScoreSortField;
+    label: string;
+    explanation: string;
+    icon: string;
+    accent: string;
+    accentText: string;
+    accentBorder: string;
+    badgeClass: string;
+  }
 > = {
   breakout: {
-    label: "Breakout",
+    title: "Breakout View",
     bucket: "breakout_watch",
-    sortField: "setup_score",
-    description: "Focus on expansion setups with strong confirmation and breakout-style follow-through.",
+    sortField: "composite_score",
+    label: "Breakout View",
+    explanation:
+      "Sorted by composite score. Highlights coins with strong momentum, rising volume, and technical breakout setups.",
+    icon: "⚡",
+    accent: "rgba(0, 176, 255, 0.08)",
+    accentText: "text-cyan-300",
+    accentBorder: "rgba(0, 176, 255, 0.35)",
+    badgeClass: "border-cyan-400/18 bg-cyan-400/10 text-cyan-100",
   },
-  positioning_build: {
-    label: "Positioning Build",
+  positioning: {
+    title: "Positioning Build View",
     bucket: "positioning_build",
     sortField: "positioning_score",
-    description: "Surface names where positioning is building before price has fully expanded.",
+    label: "Positioning Build View",
+    explanation:
+      "Sorted by positioning score. Highlights coins where smart money is building positions with OI, taker flow, and L/S shifts.",
+    icon: "◎",
+    accent: "rgba(167, 139, 250, 0.08)",
+    accentText: "text-violet-300",
+    accentBorder: "rgba(167, 139, 250, 0.32)",
+    badgeClass: "border-violet-400/18 bg-violet-400/10 text-violet-100",
   },
-  squeeze_watch: {
-    label: "Squeeze Watch",
+  squeeze: {
+    title: "Squeeze Watch View",
     bucket: "squeeze_watch",
-    sortField: "positioning_score",
-    description: "Emphasize crowded setups that may unwind fast if momentum starts to squeeze.",
+    sortField: "setup_score",
+    label: "Squeeze Watch View",
+    explanation:
+      "Sorted by setup score. Identifies squeeze candidates with crowded positioning, extreme funding, and low-liquidity pockets.",
+    icon: "◔",
+    accent: "rgba(247, 185, 85, 0.08)",
+    accentText: "text-amber-300",
+    accentBorder: "rgba(247, 185, 85, 0.32)",
+    badgeClass: "border-amber-400/18 bg-amber-400/10 text-amber-100",
   },
-  overheat_risk: {
-    label: "Overheat Risk",
+  overheat: {
+    title: "Overheat Risk View",
     bucket: "overheat_risk",
     sortField: "composite_score",
-    description: "Highlight stretched names where the move looks hot but confirmation quality is weaker.",
+    label: "Overheat Risk View",
+    explanation:
+      "Sorted by risk penalty. Flags overheated coins with extreme funding, rapid OI growth, and extended price moves.",
+    icon: "△",
+    accent: "rgba(248, 113, 113, 0.08)",
+    accentText: "text-rose-300",
+    accentBorder: "rgba(248, 113, 113, 0.32)",
+    badgeClass: "border-rose-400/18 bg-rose-400/10 text-rose-100",
   },
 };
+
+const BUCKET_META: Record<
+  SymbolScanResult["signal_bucket"],
+  {
+    label: string;
+    shortLabel: string;
+    icon: string;
+    wrapperClass: string;
+    countClass: string;
+    progressClass: string;
+    badgeClass: string;
+  }
+> = {
+  breakout_watch: {
+    label: "Breakout",
+    shortLabel: "BRK",
+    icon: "⚡",
+    wrapperClass: "border-cyan-400/18 bg-[rgba(0,176,255,0.04)]",
+    countClass: "text-cyan-300",
+    progressClass: "bg-cyan-400/40",
+    badgeClass: "border-cyan-400/18 bg-cyan-400/10 text-cyan-100",
+  },
+  positioning_build: {
+    label: "Positioning",
+    shortLabel: "POS",
+    icon: "◎",
+    wrapperClass: "border-violet-400/18 bg-[rgba(167,139,250,0.04)]",
+    countClass: "text-violet-300",
+    progressClass: "bg-violet-400/40",
+    badgeClass: "border-violet-400/18 bg-violet-400/10 text-violet-100",
+  },
+  squeeze_watch: {
+    label: "Squeeze",
+    shortLabel: "SQZ",
+    icon: "◔",
+    wrapperClass: "border-amber-400/18 bg-[rgba(247,185,85,0.04)]",
+    countClass: "text-amber-300",
+    progressClass: "bg-amber-400/40",
+    badgeClass: "border-amber-400/18 bg-amber-400/10 text-amber-100",
+  },
+  overheat_risk: {
+    label: "Overheat",
+    shortLabel: "OVH",
+    icon: "△",
+    wrapperClass: "border-rose-400/18 bg-[rgba(248,113,113,0.04)]",
+    countClass: "text-rose-300",
+    progressClass: "bg-rose-400/40",
+    badgeClass: "border-rose-400/18 bg-rose-400/10 text-rose-100",
+  },
+};
+
+const TIMEFRAMES: ScannerTimeframe[] = ["1h", "4h", "24h"];
 
 export function DashboardShell({
   timeframe,
@@ -50,105 +142,311 @@ export function DashboardShell({
   runId: number;
   results: SymbolScanResult[];
 }) {
-  const defaultPreset: StrategyPreset = "breakout";
+  const { user } = useAuth();
+  const [preset, setPreset] = useState<StrategyPreset>("breakout");
+  const [directionMode, setDirectionMode] = useState<DirectionMode>("pump");
   const [symbolSearch, setSymbolSearch] = useState("");
-  const [sortField, setSortField] = useState<ScoreSortField>(PRESET_CONFIG[defaultPreset].sortField);
-  const [bucketFilter, setBucketFilter] = useState<BucketFilter>(PRESET_CONFIG[defaultPreset].bucket);
-  const [preset, setPreset] = useState<StrategyPreset>(defaultPreset);
+
+  const presetDetails = PRESET_CONFIG[preset];
+
+  const directionFiltered = useMemo(() => {
+    return results.filter((item) =>
+      directionMode === "pump" ? item.price_change_percent_24h >= 0 : item.price_change_percent_24h < 0,
+    );
+  }, [directionMode, results]);
+
+  const filteredResults = useMemo(() => {
+    const query = symbolSearch.trim().toUpperCase();
+    const byBucket = directionFiltered.filter((item) => item.signal_bucket === presetDetails.bucket);
+    const bySearch = query ? byBucket.filter((item) => item.symbol.includes(query)) : byBucket;
+    return [...bySearch].sort((a, b) => (b[presetDetails.sortField] as number) - (a[presetDetails.sortField] as number));
+  }, [directionFiltered, presetDetails.bucket, presetDetails.sortField, symbolSearch]);
+
+  const topCandidates = filteredResults.slice(0, 5);
 
   const counts = useMemo(
     () => ({
-      breakout_watch: results.filter((x) => x.signal_bucket === "breakout_watch").length,
-      positioning_build: results.filter((x) => x.signal_bucket === "positioning_build").length,
-      squeeze_watch: results.filter((x) => x.signal_bucket === "squeeze_watch").length,
-      overheat_risk: results.filter((x) => x.signal_bucket === "overheat_risk").length,
+      breakout_watch: directionFiltered.filter((item) => item.signal_bucket === "breakout_watch").length,
+      positioning_build: directionFiltered.filter((item) => item.signal_bucket === "positioning_build").length,
+      squeeze_watch: directionFiltered.filter((item) => item.signal_bucket === "squeeze_watch").length,
+      overheat_risk: directionFiltered.filter((item) => item.signal_bucket === "overheat_risk").length,
     }),
-    [results],
+    [directionFiltered],
   );
-  const presetDetails = PRESET_CONFIG[preset];
-
-  const filteredResults = useMemo(() => {
-    const q = symbolSearch.trim().toUpperCase();
-    const base = q ? results.filter((item) => item.symbol.includes(q)) : results;
-    const bucketed = bucketFilter === "all" ? base : base.filter((item) => item.signal_bucket === bucketFilter);
-    return [...bucketed].sort((a, b) => (b[sortField] as number) - (a[sortField] as number));
-  }, [results, symbolSearch, sortField, bucketFilter]);
 
   return (
-    <div className="mx-auto grid max-w-[1700px] grid-cols-1 gap-4 p-4 lg:grid-cols-[300px_1fr]">
-      <div>
-        <FiltersPanel
-          timeframe={timeframe}
-          symbolSearch={symbolSearch}
-          onSymbolSearchChange={setSymbolSearch}
-        />
-      </div>
-      <div className="space-y-4">
-        <Card className="border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-zinc-950 to-zinc-950">
-          <CardHeader className="space-y-3">
-            <div>
-              <h2 className="text-sm font-semibold text-zinc-100">Strategy presets</h2>
-              <p className="mt-1 text-sm text-zinc-400">{presetDetails.description}</p>
+    <div className="mx-auto max-w-[1600px] px-4 pb-7 pt-1 sm:px-5">
+      <div className="flex flex-col gap-3">
+        <TrustStrip />
+
+        {!user ? (
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[rgba(30,42,58,0.5)] bg-[#0a0f16] px-4 py-2">
+            <div className="flex items-center gap-2 text-[11px] text-[color:var(--bn-text-faint)]">
+              <span className="rounded bg-[#0f1520] px-1.5 py-0.5 text-[10px]">↗</span>
+              <span>Browsing as guest. Sign in to access community discussion and save preferences.</span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {(Object.entries(PRESET_CONFIG) as [StrategyPreset, (typeof PRESET_CONFIG)[StrategyPreset]][]).map(
-                ([value, config]) => (
+            <Link href="/login" className="text-[11px] font-medium text-cyan-300 hover:text-cyan-100">
+              Sign in
+            </Link>
+          </section>
+        ) : null}
+
+        <AdPlacement placement="dashboard_top" />
+
+        <section>
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[color:var(--bn-text-faint)]">
+            Strategy Preset
+          </p>
+
+          <div className="bn-preset-grid">
+            {(Object.entries(PRESET_CONFIG) as [StrategyPreset, (typeof PRESET_CONFIG)[StrategyPreset]][]).map(
+              ([value, config]) => {
+                const active = preset === value;
+
+                return (
                   <button
                     key={value}
                     type="button"
-                    onClick={() => {
-                      setPreset(value);
-                      setBucketFilter(config.bucket);
-                      setSortField(config.sortField);
-                    }}
-                    className={`rounded-md px-3 py-1.5 text-xs transition ${
-                      preset === value ? "bg-cyan-500/20 text-cyan-300" : "bg-zinc-800 text-zinc-300"
+                    onClick={() => setPreset(value)}
+                    className={`min-h-[92px] rounded-lg border px-4 py-3 text-left transition-colors ${
+                      active
+                        ? "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+                        : "border-[rgba(30,42,58,0.75)] bg-[#0a0f16] text-[#76849a] hover:border-[rgba(42,53,69,1)] hover:text-[#aab5c8]"
+                    }`}
+                    style={
+                      active
+                        ? {
+                            background: config.accent,
+                            borderColor: config.accentBorder,
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className={`flex items-center gap-2 text-[12px] font-medium ${active ? config.accentText : ""}`}>
+                      <span className="text-[11px] opacity-85">{config.icon}</span>
+                      {config.title}
+                    </div>
+                    {active ? (
+                      <p className="mt-2 text-[11px] leading-5 text-[color:var(--bn-text-muted)]">{config.explanation}</p>
+                    ) : null}
+                  </button>
+                );
+              },
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2 xl:flex-row xl:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex overflow-hidden rounded-lg border border-[rgba(30,42,58,0.88)]">
+                {TIMEFRAMES.map((value) => (
+                  <Link
+                    key={value}
+                    href={`/?timeframe=${value}`}
+                    className={`bn-mono border-r border-[rgba(30,42,58,0.88)] px-3.5 py-1.5 text-[11px] last:border-r-0 ${
+                      timeframe === value
+                        ? "bg-[#162131] text-[#eef6ff]"
+                        : "bg-[#080d14] text-[#6f7b90] hover:bg-[#0d1219] hover:text-[#b5c0d2]"
                     }`}
                   >
-                    {config.label}
-                  </button>
-                ),
-              )}
-            </div>
-          </CardHeader>
-        </Card>
+                    {value}
+                  </Link>
+                ))}
+              </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Card><CardHeader className="text-xs text-zinc-400">Breakout candidates</CardHeader><CardContent className="text-xl font-semibold">{counts.breakout_watch}</CardContent></Card>
-          <Card><CardHeader className="text-xs text-zinc-400">Positioning build</CardHeader><CardContent className="text-xl font-semibold">{counts.positioning_build}</CardContent></Card>
-          <Card><CardHeader className="text-xs text-zinc-400">Squeeze watch</CardHeader><CardContent className="text-xl font-semibold">{counts.squeeze_watch}</CardContent></Card>
-          <Card><CardHeader className="text-xs text-zinc-400">Overheat risk</CardHeader><CardContent className="text-xl font-semibold">{counts.overheat_risk}</CardContent></Card>
-        </div>
+              <div className="flex overflow-hidden rounded-lg border border-[rgba(30,42,58,0.88)]">
+                <button
+                  type="button"
+                  onClick={() => setDirectionMode("pump")}
+                  className={`px-3.5 py-1.5 text-[11px] font-medium ${
+                    directionMode === "pump"
+                      ? "bg-[rgba(73,215,156,0.12)] text-emerald-300"
+                      : "bg-[#080d14] text-[#6f7b90] hover:text-[#b5c0d2]"
+                  }`}
+                >
+                  ▲ Pump
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDirectionMode("dump")}
+                  className={`border-l border-[rgba(30,42,58,0.88)] px-3.5 py-1.5 text-[11px] font-medium ${
+                    directionMode === "dump"
+                      ? "bg-[rgba(248,113,113,0.12)] text-rose-300"
+                      : "bg-[#080d14] text-[#6f7b90] hover:text-[#b5c0d2]"
+                  }`}
+                >
+                  ▼ Dump
+                </button>
+              </div>
+
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-[rgba(30,42,58,0.6)] bg-[#0f1520] px-2.5 py-1 text-[10px] text-[color:var(--bn-text-muted)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400/60" aria-hidden="true" />
+                {presetDetails.label}
+              </span>
+            </div>
+
+            <label className="relative block w-full xl:ml-auto xl:max-w-[240px]">
+              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-[#657084]">
+                ○
+              </span>
+              <input
+                type="text"
+                placeholder="Search symbol..."
+                value={symbolSearch}
+                onChange={(event) => setSymbolSearch(event.target.value)}
+                className="w-full rounded-lg border border-[rgba(30,42,58,0.88)] bg-[#080d14] py-1.5 pl-8 pr-3 text-[11px] text-[#cdd5e1] outline-none transition-colors placeholder:text-[#657084] focus:border-cyan-400/20"
+              />
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-2 flex items-center gap-2 text-[11px] text-[color:var(--bn-text-muted)]">
+            <span className="text-[10px] text-[color:var(--bn-text-faint)]">◌</span>
+            <span className="font-medium">Top Candidates</span>
+            <span className="rounded border border-emerald-400/20 bg-[rgba(73,215,156,0.12)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-emerald-300">
+              {directionMode}
+            </span>
+            <span className="text-[10px] text-[color:var(--bn-text-faint)]">{presetDetails.label}</span>
+          </div>
+
+          {topCandidates.length ? (
+            <div className="bn-candidate-grid">
+              {topCandidates.map((candidate, index) => {
+                const bucket = BUCKET_META[candidate.signal_bucket];
+
+                return (
+                  <Link
+                    key={`${candidate.symbol}-${index}`}
+                    href={`/coin/${candidate.symbol}?timeframe=${timeframe}&run_id=${runId}`}
+                    className={`bn-top-candidate-card group relative rounded-lg border bg-[#0a0f16] p-4 transition-colors ${
+                      index === 0
+                        ? "border-cyan-400/28 shadow-[inset_0_0_0_1px_rgba(82,213,255,0.12)]"
+                        : "border-[rgba(30,42,58,0.85)] hover:border-[rgba(42,53,69,1)]"
+                    }`}
+                  >
+                    <span className={`absolute right-3 top-3 bn-mono text-[10px] ${index === 0 ? "text-cyan-300" : "text-[#657084]"}`}>
+                      #{index + 1}
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[20px] font-semibold leading-none text-[#eef6ff]">{candidate.symbol}</span>
+                      <span className={`rounded border px-1.5 py-0.5 text-[8px] font-medium tracking-[0.04em] ${bucket.badgeClass}`}>
+                        {bucket.shortLabel}
+                      </span>
+                    </div>
+
+                    <div className="mt-3">
+                      <p className="text-[10px] text-[#657084]">Composite</p>
+                      <div className="mt-1 flex items-end justify-between gap-3">
+                        <span className={`bn-mono text-[34px] leading-none ${index === 0 ? "text-cyan-300" : "text-[#e6eef7]"}`}>
+                          {candidate.composite_score.toFixed(1)}
+                        </span>
+                        <span
+                          className={`bn-mono text-[13px] font-medium ${
+                            candidate.price_change_percent_24h >= 0 ? "text-emerald-300" : "text-rose-300"
+                          }`}
+                        >
+                          {formatPercent(candidate.price_change_percent_24h)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <MetricChip label="Heat" value={candidate.heat_score.toFixed(2)} />
+                      <MetricChip label="Vol" value={formatCompactNumber(candidate.quote_volume_24h)} />
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {candidate.reason_tags.length ? (
+                        candidate.reason_tags.slice(0, 2).map((reason) => (
+                          <span
+                            key={reason}
+                            className="rounded border border-[rgba(42,53,69,0.5)] bg-[#111827] px-1.5 py-0.5 text-[8px] text-[#788398]"
+                          >
+                            {reason}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[9px] text-[#657084]">No tags</span>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <section className="rounded-lg border border-dashed border-[rgba(30,42,58,0.88)] bg-[#0a0f16] px-5 py-8 text-center">
+              <p className="text-sm font-medium text-[#eef6ff]">No candidates match the current slice.</p>
+              <p className="mt-1.5 text-sm text-[#8b96a8]">Switch direction, change preset, or clear the symbol search.</p>
+            </section>
+          )}
+        </section>
+
+        <section>
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[color:var(--bn-text-faint)]">
+            Bucket Distribution
+          </p>
+          <div className="bn-bucket-grid">
+            {(Object.entries(BUCKET_META) as [keyof typeof BUCKET_META, (typeof BUCKET_META)[keyof typeof BUCKET_META]][]).map(
+              ([bucket, meta]) => {
+                const total = directionFiltered.length || 1;
+                const count = counts[bucket];
+                const percent = (count / total) * 100;
+
+                return (
+                  <div key={bucket} className={`bn-bucket-card rounded-lg border p-3.5 ${meta.wrapperClass}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[11px] ${meta.countClass}`}>{meta.icon}</span>
+                        <span className="text-[11px] font-medium text-[#9aa6b7]">{meta.label}</span>
+                      </div>
+                      <span className="bn-mono text-[10px] text-[#657084]">{percent.toFixed(0)}%</span>
+                    </div>
+                    <div className="mt-2.5 flex items-end gap-2">
+                      <span className={`bn-mono text-[34px] leading-none ${meta.countClass}`}>{count}</span>
+                      <span className="text-[10px] text-[#657084]">of {directionFiltered.length}</span>
+                    </div>
+                    <div className="mt-3 h-[2px] overflow-hidden rounded-full bg-[#18202d]">
+                      <div className={`h-full rounded-full ${meta.progressClass}`} style={{ width: `${percent}%` }} />
+                    </div>
+                  </div>
+                );
+              },
+            )}
+          </div>
+        </section>
 
         <AdPlacement placement="dashboard_mid" />
 
-        <div className="flex flex-wrap gap-2">
-          {([
-            ["all", "All"],
-            ["breakout_watch", "Breakout"],
-            ["positioning_build", "Positioning Build"],
-            ["squeeze_watch", "Squeeze Watch"],
-            ["overheat_risk", "Overheat Risk"],
-          ] as const).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setBucketFilter(value)}
-              className={`rounded px-3 py-1 text-xs ${bucketFilter === value ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-800 text-zinc-300"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
         <RankingsTable
           results={filteredResults}
-          sortField={sortField}
+          sortField={presetDetails.sortField}
           timeframe={timeframe}
           runId={runId}
-          onSortFieldChange={setSortField}
+          onSortFieldChange={() => undefined}
         />
       </div>
+    </div>
+  );
+}
+
+function TrustStrip() {
+  return (
+    <div className="flex items-center gap-2 py-0.5 text-[10px] text-[#657084]">
+      <span className="h-1 w-1 rounded-full bg-[#4b5565]" aria-hidden="true" />
+      <span>
+        Research / educational use only — not financial advice. Scanner results are derived from persisted run snapshots,
+        not live data.
+      </span>
+    </div>
+  );
+}
+
+function MetricChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded bg-[#111827] px-2 py-1.5">
+      <p className="text-[8px] uppercase tracking-[0.12em] text-[#657084]">{label}</p>
+      <p className="mt-1 bn-mono text-[11px] text-[#dbe4ef]">{value}</p>
     </div>
   );
 }

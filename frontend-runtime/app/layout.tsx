@@ -12,12 +12,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-zinc-950 text-zinc-100 antialiased flex flex-col">
+      <body className="flex min-h-screen flex-col antialiased">
         <AuthProvider>
           <SiteHeader />
           <main className="flex-1">{children}</main>
-          <footer className="border-t border-white/10 px-6 py-4 text-xs text-white/60">
-            Research / educational use only. Not financial advice. Data may be delayed, incomplete, or stale.
+          <footer className="border-t border-[color:var(--bn-border)] bg-[rgba(8,13,20,0.76)]">
+            <div className="mx-auto flex max-w-[1700px] flex-col gap-1 px-6 py-4 text-[11px] text-[color:var(--bn-text-faint)] sm:flex-row sm:items-center sm:justify-between">
+              <p>Research / educational use only. Not financial advice.</p>
+              <p>Persisted runs, community notes, and sponsored placements may be delayed, incomplete, or stale.</p>
+            </div>
           </footer>
         </AuthProvider>
       </body>

@@ -2,11 +2,37 @@ import Link from "next/link";
 
 import { AdPlacement } from "@/components/ads/ad-placement";
 import { DiscussionBlock } from "@/components/community/discussion-block";
+import { AppHeader } from "@/components/layout/app-header";
 import { TrustNote } from "@/components/trust/trust-note";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { fetchAssetHistory, fetchAssetLatest } from "@/lib/api/scanner";
-import { ScannerTimeframe } from "@/lib/types/scanner";
+import { ScannerTimeframe, SignalBucket } from "@/lib/types/scanner";
 import { formatCompactNumber, formatPercent, formatPrice } from "@/lib/utils/format";
+
+const BUCKET_META: Record<
+  SignalBucket,
+  { label: string; chipClass: string; accentClass: string }
+> = {
+  breakout_watch: {
+    label: "Breakout",
+    chipClass: "border-cyan-400/18 bg-cyan-400/10 text-cyan-100",
+    accentClass: "text-cyan-100",
+  },
+  positioning_build: {
+    label: "Positioning",
+    chipClass: "border-violet-400/20 bg-violet-400/10 text-violet-100",
+    accentClass: "text-violet-100",
+  },
+  squeeze_watch: {
+    label: "Squeeze",
+    chipClass: "border-amber-400/20 bg-amber-400/10 text-amber-100",
+    accentClass: "text-amber-100",
+  },
+  overheat_risk: {
+    label: "Overheat",
+    chipClass: "border-rose-400/20 bg-rose-400/10 text-rose-100",
+    accentClass: "text-rose-100",
+  },
+};
 
 function buildReasonSummary(row: Awaited<ReturnType<typeof fetchAssetLatest>>["row"]): string {
   const reasons: string[] = [...row.reason_tags];
@@ -14,7 +40,7 @@ function buildReasonSummary(row: Awaited<ReturnType<typeof fetchAssetLatest>>["r
   if ((row.composite_delta ?? 0) > 0) reasons.push("composite improving");
   if ((row.setup_delta ?? 0) > 0) reasons.push("setup strengthening");
   if ((row.positioning_delta ?? 0) > 0) reasons.push("positioning strengthening");
-  if (reasons.length === 0) return "Detected by relative scan ranking and current feature blend.";
+  if (reasons.length === 0) return "Detected by relative scan ranking and the current feature blend.";
   return `Detected due to ${Array.from(new Set(reasons)).slice(0, 6).join(", ")}.`;
 }
 
@@ -39,31 +65,44 @@ function formatFunding(value: number | null | undefined): string {
   return value.toFixed(8);
 }
 
+function formatDataAge(isoTs: string): string {
+  const ts = new Date(isoTs).getTime();
+  if (!Number.isFinite(ts)) return "age unavailable";
+  const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 function getFundingInterpretation(bias: string | null | undefined): string {
-  if (bias === "positive") return "Crowded long risk / possible overheat.";
-  if (bias === "negative") return "Crowded short / squeeze potential.";
-  if (bias === "neutral") return "Funding not extreme.";
+  if (bias === "positive") return "Crowded long risk is elevated, so continuation needs follow-through quality.";
+  if (bias === "negative") return "Crowded short positioning raises squeeze potential if momentum keeps improving.";
+  if (bias === "neutral") return "Funding is not especially stretched inside this persisted snapshot.";
   return "Funding data is not available for this snapshot.";
 }
 
 function UnavailableState({ symbol }: { symbol: string }) {
   return (
-    <main className="mx-auto max-w-3xl p-8">
-      <Card>
-        <CardHeader>
-          <h1 className="text-lg font-semibold">Coin detail unavailable</h1>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-zinc-300">
-          <p>
-            Could not load candidate details for <span className="font-medium text-zinc-100">{symbol}</span>. The detail
-            page requires a valid <span className="font-medium text-zinc-100">timeframe</span> and
-            <span className="font-medium text-zinc-100"> run_id</span> in the URL (run-context preservation).
-          </p>
-          <Link href="/" className="text-emerald-300 hover:underline">
+    <main className="mx-auto max-w-[1700px] px-4 py-8">
+      <section className="mx-auto max-w-3xl bn-panel p-6 text-center">
+        <p className="bn-kicker">Coin detail unavailable</p>
+        <h1 className="mt-3 text-2xl font-semibold text-[var(--bn-text-strong)]">Unable to load {symbol}</h1>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[color:var(--bn-text-muted)]">
+          Coin detail requires a valid symbol, timeframe, and run_id in the URL so the page can preserve the same run
+          context you launched from on the dashboard.
+        </p>
+        <div className="mt-6">
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-lg border border-cyan-400/18 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/14"
+          >
             Back to dashboard
           </Link>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </main>
   );
 }
@@ -91,6 +130,7 @@ export default async function CoinDetailPage({
       fetchAssetHistory(parsedSymbol, timeframe, runId, 120),
     ]);
     const row = latest.row;
+    const bucketMeta = BUCKET_META[row.signal_bucket];
     const fundingRow = row as typeof row & {
       funding_rate_latest?: number | null;
       funding_rate_abs?: number | null;
@@ -105,138 +145,295 @@ export default async function CoinDetailPage({
       fundingRow.funding_bias !== undefined;
 
     return (
-      <main className="mx-auto max-w-[1500px] space-y-4 p-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-zinc-100">{latest.symbol} Candidate Detail · run_id {runId}</h1>
-          <Link href={`/?timeframe=${timeframe}`} className="text-sm text-emerald-300 hover:underline">
-            Back to dashboard
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-          {[
-            ["Composite", row.composite_score.toFixed(2)],
-            ["Momentum", row.momentum_score.toFixed(2)],
-            ["Setup", row.setup_score.toFixed(2)],
-            ["Positioning", row.positioning_score.toFixed(2)],
-            ["Data Quality", row.data_quality_score.toFixed(2)],
-          ].map(([label, value]) => (
-            <Card key={label}>
-              <CardHeader className="text-xs text-zinc-400">{label}</CardHeader>
-              <CardContent className="text-lg font-semibold text-zinc-100">{value}</CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <TrustNote
-          body="Use current scores, funding, history, and discussion as context for your own review, not as a trade instruction."
+      <>
+        <AppHeader
+          timeframe={timeframe}
+          runId={runId}
+          latestRunAt={latest.ts}
+          dataAgeLabel={formatDataAge(latest.ts)}
         />
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <h2 className="text-sm font-semibold text-zinc-100">Latest + Delta Metrics</h2>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3 text-sm text-zinc-300 md:grid-cols-3">
-              <p><span className="text-zinc-500">Bucket:</span> {row.signal_bucket}</p>
-              <p><span className="text-zinc-500">Last:</span> {formatPrice(row.last_price)}</p>
-              <p><span className="text-zinc-500">24h Change:</span> {formatPercent(row.price_change_percent_24h)}</p>
-              <p><span className="text-zinc-500">Volume:</span> {formatCompactNumber(row.quote_volume_24h)}</p>
-              <p><span className="text-zinc-500">Prev Rank:</span> {row.previous_rank ?? "-"}</p>
-              <p><span className="text-zinc-500">Rank Δ:</span> {row.rank_change ?? "-"}</p>
-              <p><span className="text-zinc-500">Composite Δ:</span> {row.composite_delta?.toFixed(2) ?? "-"}</p>
-              <p><span className="text-zinc-500">Setup Δ:</span> {row.setup_delta?.toFixed(2) ?? "-"}</p>
-              <p><span className="text-zinc-500">Positioning Δ:</span> {row.positioning_delta?.toFixed(2) ?? "-"}</p>
-              <p><span className="text-zinc-500">OI Change:</span> {row.oi_change_percent_recent?.toFixed(2) ?? "-"}</p>
-              <p><span className="text-zinc-500">Taker Flow:</span> {row.taker_net_flow_recent?.toFixed(2) ?? "-"}</p>
-              <p><span className="text-zinc-500">L/S:</span> {row.long_short_ratio_recent?.toFixed(3) ?? "-"}</p>
-            </CardContent>
-          </Card>
+        <main className="mx-auto max-w-[1700px] space-y-5 px-4 py-5">
+          <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <div className="bn-panel p-5 sm:p-6">
+              <Link
+                href={`/?timeframe=${timeframe}`}
+                className="inline-flex rounded-full border border-[color:var(--bn-border)] bg-[rgba(8,13,20,0.82)] px-3 py-1.5 text-[11px] font-medium text-[color:var(--bn-text-muted)] transition hover:text-[var(--bn-text-strong)]"
+              >
+                Back to dashboard
+              </Link>
 
-          <Card>
-            <CardHeader>
-              <h2 className="text-sm font-semibold text-zinc-100">Why this coin</h2>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-zinc-300">
-              <p>{buildReasonSummary(row)}</p>
-              <p>
-                <span className="text-zinc-500">Reason tags:</span> {row.reason_tags.join(", ") || "-"}
+              <div className="mt-4 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0">
+                  <p className="bn-kicker">Candidate detail</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <h1 className="text-3xl font-semibold tracking-tight text-[var(--bn-text-strong)]">
+                      {latest.symbol}
+                    </h1>
+                    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${bucketMeta.chipClass}`}>
+                      {bucketMeta.label}
+                    </span>
+                    <span className="bn-mono rounded-md border border-[color:var(--bn-border-soft)] bg-[rgba(17,24,39,0.78)] px-2 py-1 text-[10px] text-[color:var(--bn-text-faint)]">
+                      {timeframe}
+                    </span>
+                  </div>
+
+                  <p className="mt-4 max-w-3xl text-sm leading-6 text-[color:var(--bn-text-muted)]">
+                    {buildReasonSummary(row)}
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {row.reason_tags.length ? (
+                      row.reason_tags.map((reason) => (
+                        <span
+                          key={reason}
+                          className="rounded-md border border-[color:var(--bn-border-soft)] bg-[rgba(17,24,39,0.78)] px-2 py-1 text-[10px] text-[color:var(--bn-text-muted)]"
+                        >
+                          {reason}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-[color:var(--bn-text-faint)]">No reason tags</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 xl:w-[360px] xl:grid-cols-1">
+                  <HeroStat label="Last price" value={formatPrice(row.last_price)} />
+                  <HeroStat
+                    label="24h change"
+                    value={formatPercent(row.price_change_percent_24h)}
+                    tone={row.price_change_percent_24h >= 0 ? "positive" : "negative"}
+                  />
+                  <HeroStat label="24h volume" value={formatCompactNumber(row.quote_volume_24h)} />
+                </div>
+              </div>
+            </div>
+
+            <TrustNote
+              title="Trust framing"
+              body="Use current scores, funding, history, discussion, and sponsored placements as context for review. This page preserves the same persisted run context as the dashboard so you can inspect why a symbol ranked where it did."
+              className="h-full"
+            />
+          </section>
+
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+            <ScoreCard label="Composite" value={row.composite_score.toFixed(2)} tone="cyan" />
+            <ScoreCard label="Momentum" value={row.momentum_score.toFixed(2)} tone="neutral" />
+            <ScoreCard label="Setup" value={row.setup_score.toFixed(2)} tone="neutral" />
+            <ScoreCard label="Positioning" value={row.positioning_score.toFixed(2)} tone="neutral" />
+            <ScoreCard label="Data quality" value={row.data_quality_score.toFixed(2)} tone="neutral" />
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="bn-panel p-5">
+              <p className="bn-kicker">Latest and delta context</p>
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <InfoRow label="Bucket" value={bucketMeta.label} accentClass={bucketMeta.accentClass} />
+                <InfoRow label="Previous rank" value={row.previous_rank?.toString() ?? "-"} />
+                <InfoRow label="Rank delta" value={formatSigned(row.rank_change, 0)} />
+                <InfoRow label="Composite delta" value={formatSigned(row.composite_delta)} />
+                <InfoRow label="Setup delta" value={formatSigned(row.setup_delta)} />
+                <InfoRow label="Positioning delta" value={formatSigned(row.positioning_delta)} />
+                <InfoRow label="OI change" value={formatSigned(row.oi_change_percent_recent, 2, "%")} />
+                <InfoRow label="Taker flow" value={formatSigned(row.taker_net_flow_recent)} />
+                <InfoRow label="L/S ratio" value={row.long_short_ratio_recent?.toFixed(3) ?? "-"} />
+              </div>
+            </div>
+
+            <div className="bn-panel p-5">
+              <p className="bn-kicker">Why this coin</p>
+              <p className="mt-3 text-sm leading-6 text-[color:var(--bn-text-muted)]">{buildReasonSummary(row)}</p>
+              <div className="mt-4 rounded-[18px] border border-[color:var(--bn-border-soft)] bg-[rgba(16,23,34,0.8)] px-4 py-4">
+                <p className="text-[11px] font-medium text-[var(--bn-text-strong)]">Signal stack</p>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--bn-text-muted)]">
+                  The scanner surfaced {latest.symbol} in the {bucketMeta.label.toLowerCase()} bucket using the
+                  persisted mix of composite, setup, positioning, and risk inputs for run {runId}.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="bn-panel p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="bn-kicker">Funding context</p>
+                <p className="mt-2 text-sm text-[color:var(--bn-text-muted)]">
+                  Funding helps frame whether the current setup is getting crowded or still relatively balanced.
+                </p>
+              </div>
+              <span className="bn-mono text-[11px] text-[color:var(--bn-text-faint)]">
+                persisted run {runId}
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-[18px] border border-[color:var(--bn-border)] bg-[rgba(16,23,34,0.8)] px-4 py-4">
+                {hasFunding ? (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <InfoRow label="Latest funding" value={formatFunding(fundingRow.funding_rate_latest)} />
+                    <InfoRow label="Absolute funding" value={formatFunding(fundingRow.funding_rate_abs)} />
+                    <InfoRow
+                      label="Bias"
+                      value={fundingRow.funding_bias ?? "-"}
+                      accentClass={
+                        fundingRow.funding_bias === "positive"
+                          ? "text-rose-100"
+                          : fundingRow.funding_bias === "negative"
+                            ? "text-cyan-100"
+                            : "text-[var(--bn-text-strong)]"
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-medium text-[var(--bn-text-strong)]">Funding unavailable</p>
+                    <p className="mt-2 text-sm text-[color:var(--bn-text-muted)]">
+                      This persisted snapshot did not include funding metrics for the current symbol.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-[18px] border border-[color:var(--bn-border-soft)] bg-[rgba(10,15,22,0.72)] px-4 py-4">
+                <p className="text-[11px] font-medium text-[var(--bn-text-strong)]">Interpretation</p>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--bn-text-muted)]">
+                  {getFundingInterpretation(fundingRow.funding_bias)}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="bn-panel overflow-hidden">
+            <div className="border-b border-[color:var(--bn-border)] px-5 py-4">
+              <p className="bn-kicker">Recent history</p>
+              <p className="mt-2 text-sm text-[color:var(--bn-text-muted)]">
+                Compact persisted snapshots for the current symbol inside this run context.
               </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <section className="mt-6 border-t border-white/10 pt-6">
-          <h2 className="text-sm font-semibold text-zinc-100">Funding context</h2>
-
-          <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-zinc-300 md:grid-cols-2">
-            <div className="rounded-lg border border-white/10 p-3">
-              {hasFunding ? (
-                <div className="space-y-1">
-                  <p><span className="text-zinc-500">Latest funding:</span> <span className="text-zinc-100">{formatFunding(fundingRow.funding_rate_latest)}</span></p>
-                  <p><span className="text-zinc-500">Absolute funding:</span> <span className="text-zinc-100">{formatFunding(fundingRow.funding_rate_abs)}</span></p>
-                  <p><span className="text-zinc-500">Bias:</span> <span className="capitalize text-zinc-100">{fundingRow.funding_bias}</span></p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <p className="text-zinc-100">Funding unavailable</p>
-                  <p className="text-xs text-zinc-500">This snapshot did not include funding metrics.</p>
-                </div>
-              )}
             </div>
 
-            <div className="rounded-lg border border-white/10 p-3">
-              <p className="text-zinc-500">Interpretation</p>
-              <p className="mt-1 text-zinc-400">{getFundingInterpretation(fundingRow.funding_bias)}</p>
-            </div>
-          </div>
-        </section>
-
-        <Card>
-          <CardHeader>
-            <h2 className="text-sm font-semibold text-zinc-100">Recent History (compact)</h2>
-          </CardHeader>
-          <CardContent>
-            <div className="max-h-[55vh] overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-zinc-950 text-xs text-zinc-400">
+            <div className="max-h-[55vh] overflow-auto bn-scrollbar">
+              <table className="w-full min-w-[1040px] text-sm">
+                <thead className="sticky top-0 z-10 bg-[rgba(8,13,20,0.96)] text-[10px] uppercase tracking-[0.16em] text-[color:var(--bn-text-faint)]">
                   <tr>
-                    <th className="px-3 py-2 text-left">Timestamp</th>
-                    <th className="px-3 py-2 text-right">Last</th>
-                    <th className="px-3 py-2 text-right">Comp</th>
-                    <th className="px-3 py-2 text-right">Setup</th>
-                    <th className="px-3 py-2 text-right">Pos</th>
-                    <th className="px-3 py-2 text-right">OI%</th>
-                    <th className="px-3 py-2 text-right">Flow</th>
-                    <th className="px-3 py-2 text-right">L/S</th>
-                    <th className="px-3 py-2 text-right">Risk</th>
+                    <th className="px-3 py-3 text-left">Timestamp</th>
+                    <th className="px-3 py-3 text-right">Last</th>
+                    <th className="px-3 py-3 text-right">Comp</th>
+                    <th className="px-3 py-3 text-right">Setup</th>
+                    <th className="px-3 py-3 text-right">Pos</th>
+                    <th className="px-3 py-3 text-right">OI%</th>
+                    <th className="px-3 py-3 text-right">Flow</th>
+                    <th className="px-3 py-3 text-right">L/S</th>
+                    <th className="px-3 py-3 text-right">Risk</th>
                   </tr>
                 </thead>
                 <tbody>
                   {history.points.map((point) => (
-                    <tr key={`${point.ts}-${point.last_price}`} className="border-t border-zinc-800">
-                      <td className="px-3 py-2 text-zinc-300">{new Date(point.ts).toLocaleString()}</td>
-                      <td className="px-3 py-2 text-right text-zinc-200">{formatPrice(point.last_price)}</td>
-                      <td className="px-3 py-2 text-right text-zinc-200">{point.composite_score.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right text-zinc-200">{point.setup_score.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right text-zinc-200">{point.positioning_score.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right text-zinc-200">{point.oi_change_percent_recent?.toFixed(2) ?? "-"}</td>
-                      <td className="px-3 py-2 text-right text-zinc-200">{point.taker_net_flow_recent?.toFixed(1) ?? "-"}</td>
-                      <td className="px-3 py-2 text-right text-zinc-200">{point.long_short_ratio_recent?.toFixed(3) ?? "-"}</td>
-                      <td className="px-3 py-2 text-right text-zinc-200">{point.risk_penalty.toFixed(2)}</td>
+                    <tr
+                      key={`${point.ts}-${point.last_price}`}
+                      className="border-t border-[color:var(--bn-border-soft)] bg-[rgba(7,12,18,0.58)]"
+                    >
+                      <td className="px-3 py-3 text-[color:var(--bn-text-muted)]">
+                        {new Date(point.ts).toLocaleString()}
+                      </td>
+                      <td className="bn-mono px-3 py-3 text-right text-[var(--bn-text)]">
+                        {formatPrice(point.last_price)}
+                      </td>
+                      <td className="bn-mono px-3 py-3 text-right text-cyan-100">{point.composite_score.toFixed(2)}</td>
+                      <td className="bn-mono px-3 py-3 text-right text-[var(--bn-text)]">{point.setup_score.toFixed(2)}</td>
+                      <td className="bn-mono px-3 py-3 text-right text-[var(--bn-text)]">
+                        {point.positioning_score.toFixed(2)}
+                      </td>
+                      <td className="bn-mono px-3 py-3 text-right text-[color:var(--bn-text-muted)]">
+                        {point.oi_change_percent_recent?.toFixed(2) ?? "-"}
+                      </td>
+                      <td className="bn-mono px-3 py-3 text-right text-[color:var(--bn-text-muted)]">
+                        {point.taker_net_flow_recent?.toFixed(1) ?? "-"}
+                      </td>
+                      <td className="bn-mono px-3 py-3 text-right text-[color:var(--bn-text-muted)]">
+                        {point.long_short_ratio_recent?.toFixed(3) ?? "-"}
+                      </td>
+                      <td className="bn-mono px-3 py-3 text-right text-[color:var(--bn-text-muted)]">
+                        {point.risk_penalty.toFixed(2)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+          </section>
 
-        <DiscussionBlock symbol={parsedSymbol} runId={runId} timeframe={timeframe} />
-        <AdPlacement placement="detail_bottom" />
-      </main>
+          <DiscussionBlock symbol={parsedSymbol} runId={runId} timeframe={timeframe} />
+          <AdPlacement placement="detail_bottom" />
+        </main>
+      </>
     );
   } catch {
     return <UnavailableState symbol={parsedSymbol} />;
   }
+}
+
+function HeroStat({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "positive" | "negative";
+}) {
+  const toneClass =
+    tone === "positive"
+      ? "text-emerald-100"
+      : tone === "negative"
+        ? "text-rose-100"
+        : "text-[var(--bn-text-strong)]";
+
+  return (
+    <div className="rounded-[18px] border border-[color:var(--bn-border-soft)] bg-[rgba(16,23,34,0.8)] px-4 py-3">
+      <p className="text-[10px] uppercase tracking-[0.16em] text-[color:var(--bn-text-faint)]">{label}</p>
+      <p className={`mt-2 text-lg font-medium ${toneClass}`}>{value}</p>
+    </div>
+  );
+}
+
+function ScoreCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "cyan" | "neutral";
+}) {
+  return (
+    <div className="bn-panel p-4">
+      <p className="bn-kicker">{label}</p>
+      <p className={`mt-3 bn-mono text-2xl ${tone === "cyan" ? "text-cyan-100" : "text-[var(--bn-text-strong)]"}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function InfoRow({
+  label,
+  value,
+  accentClass,
+}: {
+  label: string;
+  value: string;
+  accentClass?: string;
+}) {
+  return (
+    <div className="rounded-[16px] border border-[color:var(--bn-border-soft)] bg-[rgba(10,15,22,0.64)] px-3 py-3">
+      <p className="text-[10px] uppercase tracking-[0.16em] text-[color:var(--bn-text-faint)]">{label}</p>
+      <p className={`mt-2 text-sm font-medium ${accentClass ?? "text-[var(--bn-text-strong)]"}`}>{value}</p>
+    </div>
+  );
+}
+
+function formatSigned(value: number | null, decimals = 2, suffix = ""): string {
+  if (value === null) return "-";
+  return `${value > 0 ? "+" : ""}${value.toFixed(decimals)}${suffix}`;
 }
