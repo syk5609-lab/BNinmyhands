@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 
 export function ChromeGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPreviewRoute = pathname?.startsWith("/preview");
+  const isPreviewRoute = pathname?.startsWith("/preview") || pathname?.startsWith("/rebuild-preview");
 
   if (isPreviewRoute) {
     return <>{children}</>;
