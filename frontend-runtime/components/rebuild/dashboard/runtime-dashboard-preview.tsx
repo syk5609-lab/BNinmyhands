@@ -6,15 +6,21 @@ import { DashboardPage } from "@/components/rebuild/dashboard/dashboard-page";
 import { adaptRuntimeDashboard } from "@/lib/rebuild/adapters/dashboard";
 import { fetchAdSlots } from "@/lib/api/ads";
 import { fetchRuntimeFlags } from "@/lib/api/feature-flags";
-import { ScannerApiError, fetchLatestResearchRun } from "@/lib/api/scanner";
+import { ScannerApiError, fetchLatestResearchRun, fetchResearchRunDetail } from "@/lib/api/scanner";
 import { RebuildAdsMode, RebuildTimeframe } from "@/lib/rebuild/preview-state";
 import { useAuth } from "@/components/auth/auth-provider";
 
 type RuntimeDashboardPreviewProps = {
   timeframe: RebuildTimeframe;
+  routeKind?: "preview" | "live";
+  runId?: number | null;
 };
 
-export function RuntimeDashboardPreview({ timeframe }: RuntimeDashboardPreviewProps) {
+export function RuntimeDashboardPreview({
+  timeframe,
+  routeKind = "preview",
+  runId = null,
+}: RuntimeDashboardPreviewProps) {
   const { user } = useAuth();
   const [fixture, setFixture] = useState(() => adaptRuntimeDashboard({ timeframe, status: "loading" }));
   const [adsMode, setAdsMode] = useState<RebuildAdsMode>("on");
@@ -44,7 +50,7 @@ export function RuntimeDashboardPreview({ timeframe }: RuntimeDashboardPreviewPr
       let run;
 
       try {
-        run = await fetchLatestResearchRun(timeframe);
+        run = runId ? await fetchResearchRunDetail(runId) : await fetchLatestResearchRun(timeframe);
       } catch (error) {
         applyAdsMode("off");
         applyDashboardState(
@@ -52,6 +58,18 @@ export function RuntimeDashboardPreview({ timeframe }: RuntimeDashboardPreviewPr
             timeframe,
             status: "unavailable",
             errorKind: error instanceof ScannerApiError && error.status === 404 ? "not_found" : "backend",
+          }),
+        );
+        return;
+      }
+
+      if (run.timeframe !== timeframe) {
+        applyAdsMode("off");
+        applyDashboardState(
+          adaptRuntimeDashboard({
+            timeframe,
+            status: "unavailable",
+            errorKind: "backend",
           }),
         );
         return;
@@ -110,7 +128,7 @@ export function RuntimeDashboardPreview({ timeframe }: RuntimeDashboardPreviewPr
     return () => {
       active = false;
     };
-  }, [timeframe]);
+  }, [runId, timeframe]);
 
-  return <DashboardPage ads={adsMode} fixture={fixture} guest={!user} mode="runtime" />;
+  return <DashboardPage ads={adsMode} fixture={fixture} guest={!user} mode="runtime" routeKind={routeKind} />;
 }

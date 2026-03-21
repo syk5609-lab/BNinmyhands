@@ -20,18 +20,38 @@ function bucketClass(bucket: string) {
   return "rb-bucket";
 }
 
+function buildLiveDashboardHref(timeframe: string, runId: number) {
+  const search = new URLSearchParams({ timeframe });
+  if (runId > 0) {
+    search.set("run_id", String(runId));
+  }
+  return `/?${search.toString()}`;
+}
+
 export function DashboardPage({
   fixture,
   guest,
   ads,
   mode = "fixture",
+  routeKind = "preview",
 }: {
   fixture: DashboardFixture;
   guest: boolean;
   ads: RebuildAdsMode;
   mode?: RebuildPreviewMode;
+  routeKind?: "preview" | "live";
 }) {
   const preset = getActivePresetSummary(fixture.activePreset);
+  const dashboardHref =
+    routeKind === "live"
+      ? buildLiveDashboardHref(fixture.timeframe, fixture.runId)
+      : `/rebuild-preview/dashboard?${buildPreviewQuery({
+          timeframe: fixture.timeframe,
+          runId: fixture.runId,
+          ads,
+          guest,
+          mode,
+        })}`;
 
   return (
     <RebuildShell>
@@ -48,13 +68,7 @@ export function DashboardPage({
       {fixture.state === "loading" ? (
         <section className="rb-panel">
           <StatePanel
-            actionHref={`/rebuild-preview/dashboard?${buildPreviewQuery({
-              timeframe: fixture.timeframe,
-              runId: fixture.runId,
-              ads,
-              guest,
-              mode,
-            })}`}
+            actionHref={dashboardHref}
             actionLabel="Refresh preview"
             body="최신 persisted run 구조를 기준으로 리빌드 프리뷰 레이아웃을 채우는 중입니다."
             kicker="Dashboard loading"
@@ -71,13 +85,7 @@ export function DashboardPage({
       {fixture.state === "unavailable" ? (
         <section className="rb-panel">
           <StatePanel
-            actionHref={`/rebuild-preview/dashboard?${buildPreviewQuery({
-              timeframe: fixture.timeframe,
-              runId: fixture.runId,
-              ads,
-              guest,
-              mode,
-            })}`}
+            actionHref={dashboardHref}
             actionLabel="Open ready preview"
             body={fixture.unavailableBody ?? ""}
             kicker="Dashboard unavailable"
@@ -130,13 +138,19 @@ export function DashboardPage({
               </div>
               <div className="rb-card-grid rb-card-grid--dashboard">
                 {fixture.topCandidates.map((candidate, index) => {
-                  const href = `/rebuild-preview/coin/${candidate.symbol}?${buildPreviewQuery({
-                    timeframe: fixture.timeframe,
-                    runId: fixture.runId,
-                    ads,
-                    guest,
-                    mode,
-                  })}`;
+                  const href =
+                    routeKind === "live"
+                      ? `/coin/${candidate.symbol}?${new URLSearchParams({
+                          timeframe: fixture.timeframe,
+                          run_id: String(fixture.runId),
+                        }).toString()}`
+                      : `/rebuild-preview/coin/${candidate.symbol}?${buildPreviewQuery({
+                          timeframe: fixture.timeframe,
+                          runId: fixture.runId,
+                          ads,
+                          guest,
+                          mode,
+                        })}`;
 
                   return (
                     <Link
@@ -212,6 +226,7 @@ export function DashboardPage({
               ads={ads}
               guest={guest}
               mode={mode}
+              routeKind={routeKind}
               rows={fixture.rows}
               runId={fixture.runId}
               timeframe={fixture.timeframe}

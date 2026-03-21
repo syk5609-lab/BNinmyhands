@@ -18,6 +18,7 @@ export function RankingsTable({
   ads,
   guest,
   mode = "fixture",
+  routeKind = "preview",
 }: {
   rows: DashboardRowFixture[];
   timeframe: RebuildTimeframe;
@@ -25,6 +26,7 @@ export function RankingsTable({
   ads: RebuildAdsMode;
   guest: boolean;
   mode?: RebuildPreviewMode;
+  routeKind?: "preview" | "live";
 }) {
   return (
     <div className="rb-table-wrap">
@@ -48,13 +50,19 @@ export function RankingsTable({
           </thead>
           <tbody>
             {rows.map((row) => {
-              const href = `/rebuild-preview/coin/${row.symbol}?${buildPreviewQuery({
-                timeframe,
-                runId,
-                ads,
-                guest,
-                mode,
-              })}`;
+              const href =
+                routeKind === "live"
+                  ? `/coin/${row.symbol}?${new URLSearchParams({
+                      timeframe,
+                      run_id: String(runId),
+                    }).toString()}`
+                  : `/rebuild-preview/coin/${row.symbol}?${buildPreviewQuery({
+                      timeframe,
+                      runId,
+                      ads,
+                      guest,
+                      mode,
+                    })}`;
 
               return (
                 <tr key={row.symbol}>

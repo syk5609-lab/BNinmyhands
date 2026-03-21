@@ -15,9 +15,15 @@ type RuntimeDetailPreviewProps = {
   symbol: string;
   timeframe: RebuildTimeframe;
   runId: number | null;
+  routeKind?: "preview" | "live";
 };
 
-export function RuntimeDetailPreview({ symbol, timeframe, runId }: RuntimeDetailPreviewProps) {
+export function RuntimeDetailPreview({
+  symbol,
+  timeframe,
+  runId,
+  routeKind = "preview",
+}: RuntimeDetailPreviewProps) {
   const { user } = useAuth();
   const [fixture, setFixture] = useState(() =>
     adaptRuntimeDetail({
@@ -183,5 +189,5 @@ export function RuntimeDetailPreview({ symbol, timeframe, runId }: RuntimeDetail
     };
   }, [runId, symbol, timeframe, user]);
 
-  return <DetailPage ads={adsMode} fixture={fixture} guest={!user} mode="runtime" />;
+  return <DetailPage ads={adsMode} fixture={fixture} guest={!user} mode="runtime" routeKind={routeKind} />;
 }

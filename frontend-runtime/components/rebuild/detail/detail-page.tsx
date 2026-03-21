@@ -11,24 +11,37 @@ import { DiscussionPanel } from "@/components/rebuild/detail/discussion-panel";
 import { RebuildHeader } from "@/components/rebuild/layout/rebuild-header";
 import { RebuildShell } from "@/components/rebuild/layout/rebuild-shell";
 
+function buildLiveDashboardHref(timeframe: string, runId: number) {
+  const search = new URLSearchParams({ timeframe });
+  if (runId > 0) {
+    search.set("run_id", String(runId));
+  }
+  return `/?${search.toString()}`;
+}
+
 export function DetailPage({
   fixture,
   guest,
   ads,
   mode = "fixture",
+  routeKind = "preview",
 }: {
   fixture: DetailFixture;
   guest: boolean;
   ads: RebuildAdsMode;
   mode?: RebuildPreviewMode;
+  routeKind?: "preview" | "live";
 }) {
-  const dashboardHref = `/rebuild-preview/dashboard?${buildPreviewQuery({
-    timeframe: fixture.timeframe,
-    runId: fixture.runId,
-    ads,
-    guest,
-    mode,
-  })}`;
+  const dashboardHref =
+    routeKind === "live"
+      ? buildLiveDashboardHref(fixture.timeframe, fixture.runId)
+      : `/rebuild-preview/dashboard?${buildPreviewQuery({
+          timeframe: fixture.timeframe,
+          runId: fixture.runId,
+          ads,
+          guest,
+          mode,
+        })}`;
 
   return (
     <RebuildShell>
