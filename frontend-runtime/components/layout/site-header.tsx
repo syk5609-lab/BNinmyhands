@@ -35,22 +35,22 @@ export function SiteHeader() {
 
   const navClass = (item: NavItem) =>
     [
-      "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors",
+      "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[11px] font-medium transition-colors",
       item.accent === "amber"
         ? isActive(item.href)
-          ? "bg-amber-500/8 text-amber-300"
-          : "text-[#6f7b90] hover:text-amber-300"
+          ? "border border-amber-400/20 bg-amber-500/8 text-amber-300"
+          : "text-[#6f7b90] hover:bg-[#0f1520] hover:text-amber-300"
         : isActive(item.href)
-          ? "bg-[#141c28] text-[#eef6ff]"
-          : "text-[#6f7b90] hover:text-[#b5c0d2]",
+          ? "border border-cyan-400/18 bg-[#141c28] text-[#eef6ff]"
+          : "text-[#6f7b90] hover:bg-[#0f1520] hover:text-[#b5c0d2]",
     ].join(" ");
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[rgba(30,42,58,0.88)] bg-[linear-gradient(180deg,#080d14_0%,#0a1019_100%)]">
-      <div className="mx-auto flex h-12 max-w-[1600px] items-center justify-between px-4 sm:px-5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Link href="/" className="flex min-w-0 items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-400/25 bg-[linear-gradient(180deg,rgba(82,213,255,0.16),rgba(82,213,255,0.04))] text-[11px] font-semibold text-cyan-300">
+    <header className="sticky top-0 z-50 border-b border-[rgba(30,42,58,0.88)] bg-[rgba(8,13,20,0.94)] backdrop-blur-xl">
+      <div className="bn-dashboard-width mx-auto flex h-14 items-center justify-between px-4 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Link href="/" className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/25 bg-[linear-gradient(180deg,rgba(82,213,255,0.18),rgba(82,213,255,0.05))] text-[11px] font-semibold text-cyan-300">
               BN
             </span>
             <span className="truncate text-[14px] font-semibold tracking-tight text-[#f3f7fb]">BNinmyhands</span>
@@ -75,7 +75,7 @@ export function SiteHeader() {
             <>
               <Link
                 href="/account"
-                className="bn-desktop-user items-center gap-2 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-[#a9b4c6] transition-colors hover:bg-[#111827]/60 hover:text-[#eef6ff]"
+                className="bn-desktop-user items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-medium text-[#a9b4c6] transition-colors hover:bg-[#111827]/60 hover:text-[#eef6ff]"
               >
                 <span className="flex h-6 w-6 items-center justify-center rounded-md border border-cyan-400/20 bg-cyan-400/10 text-[10px] font-semibold text-cyan-300">
                   {user.nickname.charAt(0).toUpperCase()}
@@ -85,7 +85,7 @@ export function SiteHeader() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="bn-desktop-user rounded-md px-2.5 py-1.5 text-[11px] font-medium text-[#6f7b90] transition-colors hover:bg-[#111827]/60 hover:text-[#b5c0d2]"
+                className="bn-desktop-user rounded-lg px-3 py-2 text-[11px] font-medium text-[#6f7b90] transition-colors hover:bg-[#111827]/60 hover:text-[#b5c0d2]"
               >
                 Log out
               </button>
@@ -93,7 +93,7 @@ export function SiteHeader() {
           ) : (
             <Link
               href="/login"
-              className="inline-flex items-center rounded-lg border border-cyan-400/22 bg-[rgba(0,161,255,0.08)] px-3 py-1.5 text-[11px] font-medium text-cyan-200 transition-colors hover:bg-[rgba(0,161,255,0.14)]"
+              className="inline-flex items-center rounded-lg border border-cyan-400/22 bg-[rgba(0,161,255,0.1)] px-3.5 py-2 text-[11px] font-medium text-cyan-200 transition-colors hover:bg-[rgba(0,161,255,0.16)]"
             >
               Sign in
             </Link>
@@ -102,7 +102,7 @@ export function SiteHeader() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen((open) => !open)}
-            className="bn-mobile-toggle h-8 w-8 items-center justify-center rounded-md text-[#6f7b90] transition-colors hover:bg-[#111827]/60 hover:text-[#b5c0d2]"
+            className="bn-mobile-toggle h-9 w-9 items-center justify-center rounded-lg text-[#6f7b90] transition-colors hover:bg-[#111827]/60 hover:text-[#b5c0d2]"
             aria-label="Toggle navigation"
             aria-expanded={mobileMenuOpen}
           >

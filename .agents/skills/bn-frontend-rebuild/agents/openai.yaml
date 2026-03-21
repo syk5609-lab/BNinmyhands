@@ -1,0 +1,6 @@
+interface:
+  display_name: "BN Frontend Rebuild"
+  short_description: "BNinmyhands UI rebuild workflow with trust/run-context guardrails"
+  default_prompt: "Rebuild this BNinmyhands UI surface without changing business rules."
+policy:
+  allow_implicit_invocation: false

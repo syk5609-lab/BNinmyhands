@@ -49,10 +49,10 @@ export function RankingsTable({
   onSortFieldChange?: (field: ScoreSortField) => void;
 }) {
   return (
-    <section>
-      <div className="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+    <section className="bn-workspace-panel p-3 sm:p-4">
+      <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-2 text-[11px] text-[#9aa6b7]">
-          <span className="text-[10px] text-[#657084]">▣</span>
+          <span className="text-[10px] text-[#657084]">Table</span>
           <span className="font-medium text-[#dce5ef]">Full Rankings</span>
           <span className="text-[#657084]">·</span>
           <span className="text-[10px] text-[#657084]">
@@ -72,10 +72,10 @@ export function RankingsTable({
         </div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-lg border border-[rgba(30,42,58,0.88)] bg-[#0a0f16]">
-            <div className="overflow-auto bn-scrollbar">
+          <div className="overflow-hidden rounded-[14px] border border-[rgba(30,42,58,0.88)] bg-[#0a0f16]">
+            <div className="max-h-[58vh] overflow-auto bn-scrollbar">
               <table className="w-full min-w-[1220px] text-[11px]">
-                <thead className="bg-[#080d14] text-[9px] uppercase tracking-[0.1em] text-[#657084]">
+                <thead className="sticky top-0 z-10 bg-[#080d14] text-[9px] uppercase tracking-[0.1em] text-[#657084]">
                   <tr>
                     <th className="px-2.5 py-2.5 text-left">#</th>
                     <th className="px-2.5 py-2.5 text-left">Symbol</th>
@@ -104,7 +104,7 @@ export function RankingsTable({
                     return (
                       <tr
                         key={`${row.symbol}-${index}`}
-                        className={`border-t border-[rgba(30,42,58,0.38)] ${
+                        className={`border-t border-[rgba(30,42,58,0.38)] transition-colors hover:bg-[#0f1520] ${
                           index % 2 === 0 ? "bg-[#070c12]" : "bg-[#0a0f16]"
                         }`}
                       >
@@ -112,7 +112,7 @@ export function RankingsTable({
                         <td className="px-2.5 py-2">
                           <Link
                             href={`/coin/${row.symbol}?timeframe=${timeframe}&run_id=${runId}`}
-                            className="text-[12px] font-medium text-[#eef6ff] hover:text-cyan-100"
+                            className="text-[12px] font-semibold text-[#eef6ff] hover:text-cyan-100"
                           >
                             {row.symbol}
                           </Link>

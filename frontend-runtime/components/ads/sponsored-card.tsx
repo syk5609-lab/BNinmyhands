@@ -23,10 +23,10 @@ export function SponsoredCard({
         target="_blank"
         rel="noreferrer noopener sponsored"
         onClick={handleClick}
-        className="flex flex-wrap items-center gap-3 rounded-lg border border-[color:var(--bn-border-soft)] bg-[#0a0f16] px-4 py-3 transition-colors hover:border-[#2a3545] hover:bg-[#0d1219] sm:flex-nowrap"
+        className="flex flex-wrap items-center gap-3 rounded-[16px] border border-[color:var(--bn-border-soft)] bg-[#0a0f16] px-4 py-3 transition-colors hover:border-[#2a3545] hover:bg-[#0d1219] sm:flex-nowrap"
         style={{ borderLeft: "2px solid rgba(100, 116, 139, 0.22)" }}
       >
-        <span className="rounded border border-[color:var(--bn-border-soft)] bg-[#111827] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.2em] text-[color:var(--bn-text-faint)]">
+        <span className="rounded-md border border-[color:var(--bn-border-soft)] bg-[#111827] px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-[color:var(--bn-text-faint)]">
           Sponsored
         </span>
         <div className="min-w-0 flex-1 text-[11px] text-[color:var(--bn-text-muted)]">
@@ -51,11 +51,11 @@ export function SponsoredCard({
       target="_blank"
       rel="noreferrer noopener sponsored"
       onClick={handleClick}
-      className="bn-sponsored-full block rounded-lg border border-[color:var(--bn-border-soft)] bg-[#0a0f16] p-4 transition-colors hover:border-[#2a3545] hover:bg-[#0d1219]"
+      className="bn-sponsored-full block rounded-[16px] border border-[color:var(--bn-border-soft)] bg-[#0a0f16] p-4 transition-colors hover:border-[#2a3545] hover:bg-[#0d1219]"
       style={{ borderLeft: "2px solid rgba(100, 116, 139, 0.22)" }}
     >
       <div className="flex items-center justify-between gap-3">
-        <span className="rounded border border-[color:var(--bn-border-soft)] bg-[#111827] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.2em] text-[color:var(--bn-text-faint)]">
+        <span className="rounded-md border border-[color:var(--bn-border-soft)] bg-[#111827] px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.18em] text-[color:var(--bn-text-faint)]">
           Sponsored
         </span>
         <span className="text-[9px] text-[color:var(--bn-text-faint)]">{slot.label}</span>

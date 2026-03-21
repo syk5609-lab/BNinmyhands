@@ -23,57 +23,27 @@ export function AppHeader({
   const complete = runStatus.toLowerCase() === "complete";
 
   return (
-    <section className="sticky top-12 z-40 border-y border-[color:var(--bn-border-soft)] bg-[rgba(6,10,16,0.88)] backdrop-blur-xl">
-      <div className="mx-auto max-w-[1600px] overflow-x-auto px-4 sm:px-5 bn-scrollbar">
-        <div className="flex min-w-max items-center gap-2 py-2 text-[10px] text-[color:var(--bn-text-muted)]">
-          <span className="bn-mono inline-flex h-6 items-center rounded-md border border-cyan-400/22 bg-[rgba(82,213,255,0.12)] px-2.5 text-[10px] font-medium text-cyan-200">
+    <section className="sticky top-14 z-40 border-y border-[color:var(--bn-border-soft)] bg-[rgba(6,10,16,0.9)] backdrop-blur-xl">
+      <div className="bn-dashboard-width mx-auto overflow-x-auto px-4 sm:px-5 bn-scrollbar">
+        <div className="flex min-w-max items-center gap-2 py-2.5 text-[10px] text-[color:var(--bn-text-muted)]">
+          <span className="bn-mono inline-flex h-7 items-center rounded-lg border border-cyan-400/22 bg-[rgba(82,213,255,0.12)] px-3 text-[10px] font-medium text-cyan-200">
             {timeframe}
           </span>
 
-          {formattedRunTime ? (
-            <>
-              <StripDot />
-              <span className="text-[color:var(--bn-text)]">{formattedRunTime}</span>
-            </>
-          ) : null}
+          {formattedRunTime ? <MetaPill label={`Updated ${formattedRunTime}`} strong /> : null}
 
-          {dataAgeLabel ? <span className="text-[color:var(--bn-text-faint)]">{dataAgeLabel}</span> : null}
+          {dataAgeLabel ? <MetaPill label={dataAgeLabel} /> : null}
 
-          {typeof runId === "number" ? (
-            <>
-              <StripDot />
-              <span className="bn-mono text-[color:var(--bn-text-faint)]">run {runId}</span>
-            </>
-          ) : null}
+          {typeof runId === "number" ? <MetaPill label={`run ${runId}`} mono /> : null}
 
-          {typeof resultCount === "number" ? (
-            <>
-              <StripDot />
-              <span className="bn-mono text-[color:var(--bn-text-faint)]">N={resultCount}</span>
-            </>
-          ) : null}
+          {typeof resultCount === "number" ? <MetaPill label={`N=${resultCount}`} mono /> : null}
 
-          <StripDot />
           <StatusPill label={`RUN ${complete ? "COMPLETE" : runStatus.toUpperCase()}`} tone="success" />
           <StatusPill label="INGESTION OK" tone="success" />
 
-          {typeof averageHeat === "number" ? (
-            <>
-              <StripDot />
-              <span>
-                avg heat <span className="bn-mono text-[var(--bn-text)]">{averageHeat.toFixed(2)}</span>
-              </span>
-            </>
-          ) : null}
+          {typeof averageHeat === "number" ? <MetaPill label={`avg heat ${averageHeat.toFixed(2)}`} mono /> : null}
 
-          {typeof maxHeat === "number" ? (
-            <>
-              <StripDot />
-              <span>
-                max heat <span className="bn-mono text-[var(--bn-text)]">{maxHeat.toFixed(2)}</span>
-              </span>
-            </>
-          ) : null}
+          {typeof maxHeat === "number" ? <MetaPill label={`max heat ${maxHeat.toFixed(2)}`} mono /> : null}
         </div>
       </div>
     </section>
@@ -93,15 +63,23 @@ function StatusPill({ label, tone }: { label: string; tone: "success" | "warn" }
   const dotClass = tone === "success" ? "bg-emerald-400" : "bg-amber-400";
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-[0.16em] text-[color:var(--bn-text-faint)]">
+    <span className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-[rgba(42,53,69,0.55)] bg-[#0d141d] px-3 text-[9px] font-medium uppercase tracking-[0.14em] text-[color:var(--bn-text-faint)]">
       <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden="true" />
       {label}
     </span>
   );
 }
 
-function StripDot() {
-  return <span className="h-0.5 w-0.5 rounded-full bg-[color:var(--bn-border-soft)]" aria-hidden="true" />;
+function MetaPill({ label, mono = false, strong = false }: { label: string; mono?: boolean; strong?: boolean }) {
+  return (
+    <span
+      className={`inline-flex h-7 items-center rounded-lg border border-[rgba(42,53,69,0.55)] bg-[#0d141d] px-3 text-[10px] ${
+        mono ? "bn-mono" : ""
+      } ${strong ? "text-[var(--bn-text)]" : "text-[color:var(--bn-text-faint)]"}`}
+    >
+      {label}
+    </span>
+  );
 }
 
 function formatRunTime(value?: string) {
