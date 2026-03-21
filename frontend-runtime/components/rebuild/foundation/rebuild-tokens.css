@@ -31,7 +31,7 @@
 
 .rb-shell {
   min-height: 100%;
-  padding: 20px 14px 32px;
+  padding: 16px 14px 28px;
 }
 
 .rb-shell__inner {
@@ -129,8 +129,8 @@
 
 .rb-meta {
   display: grid;
-  gap: 10px;
-  padding: 11px 14px;
+  gap: 8px;
+  padding: 9px 12px;
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
@@ -140,7 +140,7 @@
 
 .rb-meta__label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: var(--rb-text-faint);
   font-size: 10px;
   text-transform: uppercase;
@@ -150,7 +150,7 @@
 .rb-meta__value {
   display: block;
   color: var(--rb-text);
-  font: 600 13px/1.2 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 600 12px/1.2 "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
 .rb-meta__value--accent {
@@ -158,7 +158,7 @@
 }
 
 .rb-guest-strip {
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: 1px solid rgba(92, 200, 255, 0.22);
   border-radius: 16px;
   background: rgba(11, 28, 40, 0.94);
@@ -171,8 +171,20 @@
   gap: 14px;
 }
 
+.rb-dashboard-flow {
+  display: contents;
+}
+
 .rb-panel__inner {
   padding: 12px;
+}
+
+.rb-panel--tight {
+  border-radius: 16px;
+}
+
+.rb-panel__inner--tight {
+  padding: 10px;
 }
 
 .rb-panel__header {
@@ -185,14 +197,14 @@
 
 .rb-title {
   margin: 0;
-  font: 600 20px/1.05 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 600 18px/1.05 "IBM Plex Sans", "Segoe UI", sans-serif;
   letter-spacing: -0.03em;
 }
 
 .rb-subtitle {
   margin: 4px 0 0;
   color: var(--rb-text-muted);
-  font: 400 12px/1.5 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 400 11px/1.45 "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
 .rb-chip-row,
@@ -211,9 +223,13 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.rb-chip-row--dashboard {
+  gap: 8px;
+}
+
 .rb-chip {
   display: block;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid var(--rb-line);
   border-radius: 14px;
   background: rgba(13, 21, 31, 0.9);
@@ -227,27 +243,35 @@
 
 .rb-chip__title {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   color: var(--rb-text);
-  font: 600 13px/1.2 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 600 12px/1.2 "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
 .rb-chip__body {
   display: block;
   color: var(--rb-text-muted);
-  font: 400 12px/1.45 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 400 11px/1.35 "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
 .rb-note-block {
-  margin-top: 10px;
-  padding: 10px 12px;
+  margin-top: 8px;
+  padding: 8px 10px;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(10, 18, 27, 0.9);
 }
 
+.rb-note-block--tight .rb-copy {
+  line-height: 1.45;
+}
+
 .rb-card-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.rb-card-grid--dashboard {
+  gap: 8px;
 }
 
 .rb-card {
@@ -255,6 +279,14 @@
   border: 1px solid var(--rb-line);
   border-radius: 16px;
   background: rgba(11, 20, 29, 0.96);
+}
+
+.rb-card--compact {
+  padding: 8px 9px;
+}
+
+.rb-card--mobile-hidden {
+  display: block;
 }
 
 .rb-card__top,
@@ -271,7 +303,7 @@
 .rb-card__symbol,
 .rb-hero__symbol {
   margin: 0;
-  font: 600 15px/1.1 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 600 14px/1.1 "IBM Plex Sans", "Segoe UI", sans-serif;
   letter-spacing: -0.02em;
 }
 
@@ -310,8 +342,8 @@
 .rb-tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 4px;
+  margin-top: 5px;
 }
 
 .rb-tag {
@@ -324,6 +356,7 @@
 
 .rb-summary-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .rb-summary {
@@ -333,12 +366,16 @@
   background: rgba(12, 20, 29, 0.95);
 }
 
+.rb-summary--compact {
+  padding: 8px 10px;
+}
+
 .rb-summary__count,
 .rb-score__value,
 .rb-stat__value,
 .rb-metric__value {
   color: var(--rb-text);
-  font: 600 17px/1.1 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 600 16px/1.08 "IBM Plex Sans", "Segoe UI", sans-serif;
   letter-spacing: -0.02em;
 }
 
@@ -358,9 +395,13 @@
   background: rgba(12, 20, 29, 0.95);
 }
 
+.rb-control--compact {
+  padding: 7px 9px;
+}
+
 .rb-control__label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: var(--rb-text-faint);
   font: 500 11px/1 "JetBrains Mono", monospace;
 }
@@ -368,7 +409,7 @@
 .rb-control__value {
   display: block;
   color: var(--rb-text);
-  font: 500 12px/1.2 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 500 11px/1.2 "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
 .rb-table-wrap {
@@ -435,9 +476,38 @@
   padding: 10px 12px;
 }
 
+.rb-dashboard-sponsor .rb-sponsor {
+  padding: 8px 10px;
+}
+
+.rb-dashboard-sponsor .rb-sponsor__row {
+  gap: 8px;
+}
+
+.rb-dashboard-sponsor .rb-sponsor__eyebrow {
+  margin: 2px 0 1px;
+}
+
+.rb-dashboard-sponsor .rb-sponsor__title {
+  font-size: 12px;
+}
+
+.rb-dashboard-sponsor .rb-sponsor__body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  font-size: 10px;
+}
+
+.rb-dashboard-sponsor .rb-sponsor__cta {
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
 .rb-sponsor__row {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
 }
@@ -461,7 +531,7 @@
 }
 
 .rb-sponsor__eyebrow {
-  margin: 6px 0 4px;
+  margin: 4px 0 2px;
   color: var(--rb-text-faint);
   font: 500 11px/1 "JetBrains Mono", monospace;
   text-transform: uppercase;
@@ -471,13 +541,13 @@
 .rb-sponsor__title {
   margin: 0;
   color: var(--rb-text);
-  font: 600 14px/1.2 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 600 13px/1.15 "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
 .rb-sponsor__body {
   margin: 2px 0 0;
   color: var(--rb-text-muted);
-  font: 400 11px/1.3 "IBM Plex Sans", "Segoe UI", sans-serif;
+  font: 400 11px/1.2 "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
 .rb-sponsor__cta {
@@ -563,7 +633,7 @@
 
 .rb-hero__summary,
 .rb-copy {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: var(--rb-text-muted);
   font: 400 14px/1.65 "IBM Plex Sans", "Segoe UI", sans-serif;
 }
@@ -586,7 +656,7 @@
 .rb-score__label,
 .rb-metric__label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--rb-text-faint);
   font: 500 11px/1 "JetBrains Mono", monospace;
   text-transform: uppercase;
@@ -601,6 +671,10 @@
   grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
 }
 
+.rb-detail-grid--funding-history {
+  grid-template-columns: minmax(0, 0.97fr) minmax(360px, 1.03fr);
+}
+
 .rb-metric-grid {
   display: grid;
   gap: 10px;
@@ -610,11 +684,15 @@
 .rb-funding-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(180px, 1.18fr);
 }
 
 .rb-history-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.rb-history-grid--detail {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .rb-panel--soft {
@@ -638,8 +716,8 @@
 
 .rb-history-row {
   display: grid;
-  gap: 8px;
-  padding: 12px 0;
+  gap: 6px;
+  padding: 10px 0;
   border-bottom: 1px solid rgba(148, 163, 184, 0.08);
 }
 
@@ -655,7 +733,7 @@
 }
 
 .rb-history-cell {
-  padding-top: 2px;
+  padding-top: 1px;
 }
 
 .rb-discussion-post {
@@ -735,7 +813,12 @@
 
 @media (max-width: 720px) {
   .rb-shell {
-    padding: 14px 10px 24px;
+    padding: 10px 8px 18px;
+  }
+
+  .rb-dashboard-flow {
+    display: flex;
+    flex-direction: column;
   }
 
   .rb-hero,
@@ -748,8 +831,6 @@
 
   .rb-meta,
   .rb-score-grid,
-  .rb-chip-row,
-  .rb-card-grid,
   .rb-summary-grid,
   .rb-control-row,
   .rb-stat-row,
@@ -760,9 +841,27 @@
     grid-template-columns: 1fr;
   }
 
+  .rb-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rb-chip-row--dashboard,
+  .rb-card-grid--dashboard,
+  .rb-summary-grid,
+  .rb-control-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rb-chip-row--dashboard,
+  .rb-card-grid--dashboard,
+  .rb-summary-grid,
+  .rb-control-row {
+    gap: 6px;
+  }
+
   .rb-header {
     gap: 10px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     align-items: center;
   }
 
@@ -771,15 +870,68 @@
   }
 
   .rb-brand__meta {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .rb-header__action {
-    padding: 8px 10px;
+    padding: 7px 9px;
     font-size: 11px;
   }
 
   .rb-title {
-    font-size: 18px;
+    font-size: 17px;
+  }
+
+  .rb-panel__inner,
+  .rb-panel__inner--tight {
+    padding: 9px;
+  }
+
+  .rb-note-block,
+  .rb-note-block--tight,
+  .rb-guest-strip,
+  .rb-sponsor,
+  .rb-dashboard-sponsor .rb-sponsor {
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .rb-note-block--tight .rb-copy {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+  }
+
+  .rb-card--mobile-hidden {
+    display: none;
+  }
+
+  .rb-dashboard-flow__presets {
+    order: 1;
+  }
+
+  .rb-dashboard-flow__controls {
+    order: 2;
+  }
+
+  .rb-dashboard-flow__rankings {
+    order: 3;
+  }
+
+  .rb-dashboard-flow__sponsor-top {
+    order: 4;
+  }
+
+  .rb-dashboard-flow__candidates {
+    order: 5;
+  }
+
+  .rb-dashboard-flow__summary {
+    order: 6;
+  }
+
+  .rb-dashboard-flow__sponsor-mid {
+    display: none;
   }
 }

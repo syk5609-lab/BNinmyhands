@@ -137,7 +137,7 @@ export function DetailPage({
             </div>
           </section>
 
-          <section className="rb-detail-grid">
+          <section className="rb-detail-grid rb-detail-grid--funding-history">
             <div className="rb-panel">
               <div className="rb-panel__inner">
                 <div className="rb-panel__header">
@@ -182,7 +182,7 @@ export function DetailPage({
                       <span className="rb-table__strong">{point.ts}</span>
                       <span className="rb-mini">last {point.last}</span>
                     </div>
-                    <div className="rb-history-grid">
+                    <div className="rb-history-grid rb-history-grid--detail">
                       <div className="rb-history-cell">
                         <span className="rb-metric__label">Composite</span>
                         <span className="rb-table__strong">{point.composite}</span>
