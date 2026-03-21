@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { DashboardRowFixture } from "@/fixtures/rebuild/dashboard.fixture";
-import { buildPreviewQuery, RebuildAdsMode, RebuildTimeframe } from "@/lib/rebuild/preview-state";
+import { buildPreviewQuery, RebuildAdsMode, RebuildPreviewMode, RebuildTimeframe } from "@/lib/rebuild/preview-state";
 
 function bucketClass(bucket: string) {
   if (bucket === "Breakout") return "rb-bucket rb-bucket--breakout";
@@ -17,12 +17,14 @@ export function RankingsTable({
   runId,
   ads,
   guest,
+  mode = "fixture",
 }: {
   rows: DashboardRowFixture[];
   timeframe: RebuildTimeframe;
   runId: number;
   ads: RebuildAdsMode;
   guest: boolean;
+  mode?: RebuildPreviewMode;
 }) {
   return (
     <div className="rb-table-wrap">
@@ -51,6 +53,7 @@ export function RankingsTable({
                 runId,
                 ads,
                 guest,
+                mode,
               })}`;
 
               return (

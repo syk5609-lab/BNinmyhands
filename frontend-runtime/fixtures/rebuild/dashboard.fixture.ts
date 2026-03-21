@@ -1,6 +1,6 @@
 import { RebuildPreviewState, RebuildTimeframe } from "@/lib/rebuild/preview-state";
 
-import { REBUILD_PRESETS, REBUILD_SPONSORS, RebuildPresetId } from "@/fixtures/rebuild/runtime.fixture";
+import { REBUILD_PRESETS, REBUILD_SPONSORS, RebuildPresetId, RebuildSponsor } from "@/fixtures/rebuild/runtime.fixture";
 
 export type DashboardRowFixture = {
   symbol: string;
@@ -42,8 +42,8 @@ export type DashboardFixture = {
   }>;
   rows: DashboardRowFixture[];
   sponsors: {
-    top: typeof REBUILD_SPONSORS.dashboardTop;
-    mid: typeof REBUILD_SPONSORS.dashboardMid;
+    top?: RebuildSponsor;
+    mid?: RebuildSponsor;
   };
 };
 

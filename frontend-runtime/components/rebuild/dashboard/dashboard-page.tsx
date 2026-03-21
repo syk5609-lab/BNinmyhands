@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { DashboardFixture, getActivePresetSummary } from "@/fixtures/rebuild/dashboard.fixture";
 import { REBUILD_GUEST_STRIP } from "@/fixtures/rebuild/runtime.fixture";
-import { RebuildAdsMode, buildPreviewQuery } from "@/lib/rebuild/preview-state";
+import { RebuildAdsMode, RebuildPreviewMode, buildPreviewQuery } from "@/lib/rebuild/preview-state";
 
 import { DisclosureFooter } from "@/components/rebuild/common/disclosure-footer";
 import { RunContextStrip } from "@/components/rebuild/common/run-context-strip";
@@ -24,10 +24,12 @@ export function DashboardPage({
   fixture,
   guest,
   ads,
+  mode = "fixture",
 }: {
   fixture: DashboardFixture;
   guest: boolean;
   ads: RebuildAdsMode;
+  mode?: RebuildPreviewMode;
 }) {
   const preset = getActivePresetSummary(fixture.activePreset);
 
@@ -51,6 +53,7 @@ export function DashboardPage({
               runId: fixture.runId,
               ads,
               guest,
+              mode,
             })}`}
             actionLabel="Refresh preview"
             body="최신 persisted run 구조를 기준으로 리빌드 프리뷰 레이아웃을 채우는 중입니다."
@@ -73,6 +76,7 @@ export function DashboardPage({
               runId: fixture.runId,
               ads,
               guest,
+              mode,
             })}`}
             actionLabel="Open ready preview"
             body={fixture.unavailableBody ?? ""}
@@ -131,6 +135,7 @@ export function DashboardPage({
                     runId: fixture.runId,
                     ads,
                     guest,
+                    mode,
                   })}`;
 
                   return (
@@ -159,7 +164,7 @@ export function DashboardPage({
           </section>
 
           <div className="rb-dashboard-sponsor rb-dashboard-flow__sponsor-top">
-            {ads === "on" ? <SponsorSlot sponsor={fixture.sponsors.top} /> : null}
+            {ads === "on" && fixture.sponsors.top ? <SponsorSlot sponsor={fixture.sponsors.top} /> : null}
           </div>
 
           <section className="rb-summary-grid rb-dashboard-flow__summary">
@@ -203,11 +208,18 @@ export function DashboardPage({
                 </span>
               </div>
             </div>
-            <RankingsTable ads={ads} guest={guest} rows={fixture.rows} runId={fixture.runId} timeframe={fixture.timeframe} />
+            <RankingsTable
+              ads={ads}
+              guest={guest}
+              mode={mode}
+              rows={fixture.rows}
+              runId={fixture.runId}
+              timeframe={fixture.timeframe}
+            />
           </section>
 
           <div className="rb-dashboard-sponsor rb-dashboard-flow__sponsor-mid">
-            {ads === "on" ? <SponsorSlot sponsor={fixture.sponsors.mid} /> : null}
+            {ads === "on" && fixture.sponsors.mid ? <SponsorSlot sponsor={fixture.sponsors.mid} /> : null}
           </div>
         </div>
       ) : null}

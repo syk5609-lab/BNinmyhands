@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { DetailFixture } from "@/fixtures/rebuild/detail.fixture";
-import { RebuildAdsMode, buildPreviewQuery } from "@/lib/rebuild/preview-state";
+import { RebuildAdsMode, RebuildPreviewMode, buildPreviewQuery } from "@/lib/rebuild/preview-state";
 
 import { DisclosureFooter } from "@/components/rebuild/common/disclosure-footer";
 import { RunContextStrip } from "@/components/rebuild/common/run-context-strip";
@@ -15,16 +15,19 @@ export function DetailPage({
   fixture,
   guest,
   ads,
+  mode = "fixture",
 }: {
   fixture: DetailFixture;
   guest: boolean;
   ads: RebuildAdsMode;
+  mode?: RebuildPreviewMode;
 }) {
   const dashboardHref = `/rebuild-preview/dashboard?${buildPreviewQuery({
     timeframe: fixture.timeframe,
     runId: fixture.runId,
     ads,
     guest,
+    mode,
   })}`;
 
   return (
@@ -38,7 +41,20 @@ export function DetailPage({
         updatedLabel={fixture.updatedLabel}
       />
 
-      {fixture.state === "unavailable" ? (
+      {fixture.state === "loading" ? (
+        <>
+          <section className="rb-panel">
+            <StatePanel
+              actionHref={dashboardHref}
+              actionLabel="Back to dashboard"
+              body="같은 persisted run 안의 symbol detail, funding, history, discussion 문맥을 불러오는 중입니다."
+              kicker="Detail loading"
+              title="Same-run detail is preparing"
+            />
+          </section>
+          <DisclosureFooter />
+        </>
+      ) : fixture.state === "unavailable" ? (
         <>
           <section className="rb-panel">
             <StatePanel
@@ -218,8 +234,15 @@ export function DetailPage({
             </div>
           </section>
 
-          <DiscussionPanel guest={guest} posts={fixture.discussion.posts} title={fixture.discussion.title} />
-          <div>{ads === "on" ? <SponsorSlot sponsor={fixture.sponsor} /> : null}</div>
+          <DiscussionPanel
+            actionHref={fixture.discussion.actionHref}
+            actionLabel={fixture.discussion.actionLabel}
+            guest={guest}
+            posts={fixture.discussion.posts}
+            statusMessage={fixture.discussion.statusMessage}
+            title={fixture.discussion.title}
+          />
+          <div>{ads === "on" && fixture.sponsor ? <SponsorSlot sponsor={fixture.sponsor} /> : null}</div>
           <DisclosureFooter />
         </>
       )}

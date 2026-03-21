@@ -1,6 +1,7 @@
 export type RebuildTimeframe = "1h" | "4h" | "24h";
 export type RebuildPreviewState = "ready" | "loading" | "unavailable";
 export type RebuildAdsMode = "on" | "off";
+export type RebuildPreviewMode = "fixture" | "runtime";
 
 type SearchValue = string | string[] | undefined;
 
@@ -9,7 +10,8 @@ export type RebuildPreviewParams = {
   state: RebuildPreviewState;
   ads: RebuildAdsMode;
   guest: boolean;
-  runId: number;
+  mode: RebuildPreviewMode;
+  runId: number | null;
 };
 
 function pickFirst(value: SearchValue) {
@@ -20,6 +22,10 @@ function parseTimeframe(value: SearchValue): RebuildTimeframe {
   const next = pickFirst(value);
   if (next === "4h" || next === "24h") return next;
   return "1h";
+}
+
+function parseMode(value: SearchValue): RebuildPreviewMode {
+  return pickFirst(value) === "runtime" ? "runtime" : "fixture";
 }
 
 function parseState(value: SearchValue): RebuildPreviewState {
@@ -38,10 +44,11 @@ function parseGuest(value: SearchValue) {
 
 function parseRunId(value: SearchValue) {
   const raw = pickFirst(value);
+  if (!raw) return null;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return 101;
+  if (!Number.isFinite(parsed)) return null;
   const integer = Math.trunc(parsed);
-  return integer > 0 ? integer : 101;
+  return integer > 0 ? integer : null;
 }
 
 export function parsePreviewParams(searchParams: Record<string, SearchValue>): RebuildPreviewParams {
@@ -50,6 +57,7 @@ export function parsePreviewParams(searchParams: Record<string, SearchValue>): R
     state: parseState(searchParams.state),
     ads: parseAds(searchParams.ads),
     guest: parseGuest(searchParams.guest),
+    mode: parseMode(searchParams.mode),
     runId: parseRunId(searchParams.run_id),
   };
 }
@@ -60,6 +68,7 @@ export function buildPreviewQuery(params: {
   state?: RebuildPreviewState;
   ads: RebuildAdsMode;
   guest: boolean;
+  mode?: RebuildPreviewMode;
 }) {
   const search = new URLSearchParams({
     timeframe: params.timeframe,
@@ -68,7 +77,11 @@ export function buildPreviewQuery(params: {
     guest: params.guest ? "1" : "0",
   });
 
-  if (typeof params.runId === "number") {
+  if (params.mode === "runtime") {
+    search.set("mode", "runtime");
+  }
+
+  if (typeof params.runId === "number" && params.runId > 0) {
     search.set("run_id", String(params.runId));
   }
 

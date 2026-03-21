@@ -6,6 +6,9 @@ export function DiscussionPanel({
   title,
   posts,
   guest,
+  actionLabel,
+  actionHref,
+  statusMessage,
 }: {
   title: string;
   posts: Array<{
@@ -15,6 +18,9 @@ export function DiscussionPanel({
     meta: string;
   }>;
   guest: boolean;
+  actionLabel?: string;
+  actionHref?: string;
+  statusMessage?: string;
 }) {
   return (
     <section className="rb-panel">
@@ -24,15 +30,16 @@ export function DiscussionPanel({
             <p className="rb-mini">Discussion</p>
             <h2 className="rb-title">{title}</h2>
           </div>
-          {guest ? (
-            <Link className="rb-header__action" href="/login">
-              Log in to write
+          {actionHref ? (
+            <Link className="rb-header__action" href={actionHref}>
+              {actionLabel ?? "Log in to write"}
             </Link>
           ) : (
-            <span className="rb-header__action">Write enabled</span>
+            <span className="rb-header__action">{actionLabel ?? (guest ? "Log in to write" : "Write enabled")}</span>
           )}
         </div>
         {guest ? <div className="rb-guest-strip">{REBUILD_DISCUSSION_GUEST}</div> : null}
+        {statusMessage ? <div className="rb-guest-strip">{statusMessage}</div> : null}
         <div>
           {posts.map((post) => (
             <article className="rb-discussion-post" key={`${post.author}-${post.meta}`}>

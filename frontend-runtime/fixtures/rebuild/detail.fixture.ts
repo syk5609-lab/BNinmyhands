@@ -1,6 +1,6 @@
 import { RebuildPreviewState, RebuildTimeframe } from "@/lib/rebuild/preview-state";
 
-import { REBUILD_SPONSORS } from "@/fixtures/rebuild/runtime.fixture";
+import { REBUILD_SPONSORS, RebuildSponsor } from "@/fixtures/rebuild/runtime.fixture";
 
 export type DetailFixture = {
   state: RebuildPreviewState;
@@ -37,6 +37,9 @@ export type DetailFixture = {
   }>;
   discussion: {
     title: string;
+    actionLabel?: string;
+    actionHref?: string;
+    statusMessage?: string;
     posts: Array<{
       author: string;
       role: string;
@@ -46,7 +49,7 @@ export type DetailFixture = {
   };
   unavailableTitle?: string;
   unavailableBody?: string;
-  sponsor: typeof REBUILD_SPONSORS.detailBottom;
+  sponsor?: RebuildSponsor;
 };
 
 function buildReadyFixture(symbol: string, timeframe: RebuildTimeframe, runId: number): DetailFixture {
@@ -130,6 +133,8 @@ function buildReadyFixture(symbol: string, timeframe: RebuildTimeframe, runId: n
     ],
     discussion: {
       title: "Same-run interpretation notes",
+      actionLabel: "Log in to write",
+      actionHref: "/login",
       posts: [
         {
           author: "deltaframe",
