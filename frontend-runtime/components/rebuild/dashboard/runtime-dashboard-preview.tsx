@@ -75,6 +75,17 @@ export function RuntimeDashboardPreview({
         return;
       }
 
+      if (routeKind === "live" && runId === null && typeof window !== "undefined" && run.id > 0) {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set("timeframe", timeframe);
+        nextUrl.searchParams.set("run_id", String(run.id));
+        const nextHref = `${nextUrl.pathname}${nextUrl.search}`;
+        const currentHref = `${window.location.pathname}${window.location.search}`;
+        if (nextHref !== currentHref) {
+          window.history.replaceState(window.history.state, "", nextHref);
+        }
+      }
+
       applyDashboardState(
         adaptRuntimeDashboard({
           timeframe,
@@ -128,7 +139,7 @@ export function RuntimeDashboardPreview({
     return () => {
       active = false;
     };
-  }, [runId, timeframe]);
+  }, [routeKind, runId, timeframe]);
 
   return <DashboardPage ads={adsMode} fixture={fixture} guest={!user} mode="runtime" routeKind={routeKind} />;
 }

@@ -93,7 +93,18 @@ export function DashboardPage({
           />
         </section>
       ) : null}
-      {fixture.state === "ready" ? (
+      {fixture.state === "ready" && fixture.rows.length === 0 ? (
+        <section className="rb-panel">
+          <StatePanel
+            actionHref={dashboardHref}
+            actionLabel={routeKind === "live" ? "Refresh workspace" : "Refresh preview"}
+            body="이 timeframe의 현재 persisted run에는 표시할 후보가 없습니다. 데이터가 비어 있는 상태이며, 화면이 고장난 것은 아닙니다."
+            kicker="Dashboard empty"
+            title="No candidates in this run"
+          />
+        </section>
+      ) : null}
+      {fixture.state === "ready" && fixture.rows.length > 0 ? (
         <div className="rb-dashboard-flow">
           <section className="rb-panel rb-panel--tight rb-dashboard-flow__presets">
             <div className="rb-panel__inner rb-panel__inner--tight">

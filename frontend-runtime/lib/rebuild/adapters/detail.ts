@@ -21,7 +21,7 @@ type DetailAdapterInput = {
   flags?: RuntimeFeatureFlags | null;
   sponsorSlot?: AdSlotRender | null;
   user?: CurrentUser | null;
-  errorKind?: "invalid_context" | "timeframe_mismatch" | "symbol_not_found" | "backend";
+  errorKind?: "invalid_context" | "timeframe_mismatch" | "symbol_not_found" | "run_not_found" | "backend";
   communityState?: "ready" | "disabled" | "unavailable";
 };
 
@@ -103,12 +103,53 @@ function mapSponsor(slot: AdSlotRender | null | undefined): RebuildSponsor | und
   };
 }
 
+function getUnavailableCopy(errorKind: DetailAdapterInput["errorKind"]) {
+  if (errorKind === "invalid_context") {
+    return {
+      title: "Invalid run context",
+      body: "잘못된 run 문맥입니다. run_id가 없거나 유효하지 않습니다. 대시보드에서 다시 진입해 주세요.",
+      funding: "잘못된 run 문맥 때문에 same-run detail을 구성할 수 없습니다.",
+    };
+  }
+
+  if (errorKind === "timeframe_mismatch") {
+    return {
+      title: "Context mismatch",
+      body: "요청한 timeframe과 run 문맥이 맞지 않습니다. 같은 run의 timeframe으로 다시 진입해 주세요.",
+      funding: "timeframe 문맥이 맞지 않아 같은 run detail을 구성할 수 없습니다.",
+    };
+  }
+
+  if (errorKind === "run_not_found") {
+    return {
+      title: "Requested run is unavailable",
+      body: "요청한 run_id를 찾을 수 없습니다. 이미 사라졌거나 유효하지 않은 run일 수 있습니다.",
+      funding: "요청한 run 자체를 찾을 수 없어 same-run detail을 구성할 수 없습니다.",
+    };
+  }
+
+  if (errorKind === "symbol_not_found") {
+    return {
+      title: "Requested detail is unavailable",
+      body: "요청한 symbol detail을 이 run 문맥에서 찾을 수 없습니다. symbol 또는 run 조합을 다시 확인해 주세요.",
+      funding: "요청한 symbol detail을 찾을 수 없어 funding 문맥도 함께 제공할 수 없습니다.",
+    };
+  }
+
+  return {
+    title: "Requested run is unavailable",
+    body: "요청한 run 또는 detail 데이터를 불러오지 못했습니다. 잠시 후 다시 시도하거나 대시보드에서 다시 진입해 주세요.",
+    funding: "요청한 run 또는 detail 데이터를 불러오지 못해 same-run detail을 구성할 수 없습니다.",
+  };
+}
+
 function buildUnavailableFixture(
   symbol: string,
   timeframe: DetailFixture["timeframe"],
   runId: number | null,
-  title?: string,
+  errorKind?: DetailAdapterInput["errorKind"],
 ): DetailFixture {
+  const copy = getUnavailableCopy(errorKind);
   return {
     state: "unavailable",
     symbol,
@@ -129,8 +170,7 @@ function buildUnavailableFixture(
       latest: "-",
       absolute: "-",
       bias: "-",
-      interpretation:
-        "잘못된 run_id, timeframe mismatch, symbol not found, 또는 detail 데이터 부재로 인해 same-run detail을 구성하지 못했습니다.",
+      interpretation: copy.funding,
     },
     history: [],
     discussion: {
@@ -139,9 +179,8 @@ function buildUnavailableFixture(
       actionHref: "/login",
       posts: [],
     },
-    unavailableTitle: title ?? "Detail context unavailable",
-    unavailableBody:
-      "잘못된 run_id, timeframe mismatch, symbol not found, 또는 detail 데이터 부재로 인해 same-run detail을 구성하지 못했습니다. 대시보드에서 다시 진입해 주세요.",
+    unavailableTitle: copy.title,
+    unavailableBody: copy.body,
   };
 }
 
@@ -150,7 +189,7 @@ export function adaptRuntimeDetail(input: DetailAdapterInput): DetailFixture {
 
   if (input.status === "loading") {
     return {
-      ...buildUnavailableFixture(normalizedSymbol, input.timeframe, input.runId, "Detail loading"),
+      ...buildUnavailableFixture(normalizedSymbol, input.timeframe, input.runId, "backend"),
       state: "loading",
       runStatus: "loading",
       updatedLabel: "Checking same-run detail",
@@ -167,15 +206,7 @@ export function adaptRuntimeDetail(input: DetailAdapterInput): DetailFixture {
     !input.latest ||
     !input.history
   ) {
-    const title =
-      input.errorKind === "timeframe_mismatch"
-        ? "Detail context unavailable"
-        : input.errorKind === "symbol_not_found"
-          ? "Detail context unavailable"
-          : input.errorKind === "backend"
-            ? "Detail context unavailable"
-            : "Detail context unavailable";
-    return buildUnavailableFixture(normalizedSymbol, input.timeframe, input.runId, title);
+    return buildUnavailableFixture(normalizedSymbol, input.timeframe, input.runId, input.errorKind);
   }
 
   const row = input.latest.row as FundingAwareRow;

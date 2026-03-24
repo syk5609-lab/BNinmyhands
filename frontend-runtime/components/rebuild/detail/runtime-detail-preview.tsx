@@ -91,7 +91,7 @@ export function RuntimeDetailPreview({
             runId,
             status: "unavailable",
             errorKind:
-              error instanceof ScannerApiError && error.status === 404 ? "symbol_not_found" : "backend",
+              error instanceof ScannerApiError && error.status === 404 ? "run_not_found" : "backend",
           }),
         );
         return;
